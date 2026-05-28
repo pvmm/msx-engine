@@ -8,10 +8,14 @@ available_tiles = 256
 scrolling_tiles = available_tiles
 palette = False
 r18_hardware_scroll = False
+megarom = False
 
 frame_rate_options = ['60Hz', '50Hz']
 force_frame_rate = False
 frame_rate = frame_rate_options[0]
+
+rom_options = ['8K', '16K']
+rom_type = rom_options[0]
 
 _105_color_mode = False
 
@@ -162,6 +166,10 @@ def set_r18(e):
     ui.notify(f'Target platform set to {target}')
 
 
+def toggle_megarom(e):
+    pass
+
+
 def header(text):
     ui.element('div')
     return ui.label(text)
@@ -254,7 +262,9 @@ with ui.tab_panels(tabs, value='p').classes('w-full'):
 
             ui.label('Memory layout')
             with ui.column().classes('ml-8 gap-1'):
-                ui.checkbox('MEGAROM', on_change=lambda e: ui.notify(str(e.value)))
+                ui.checkbox('ROM bank switching', on_change=lambda e: toggle_megarom(e))
+                with ui.column().classes('ml-8 gap-1'):
+                    ui.radio(rom_options, value=rom_options[0], on_change=lambda e: change_frame_rate(e)).props('inline').disable()
 
     with ui.tab_panel('a'):
         ui.label('Infos')
