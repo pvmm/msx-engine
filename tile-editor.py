@@ -1,26 +1,32 @@
 from nicegui import ui
 from typing import List, Tuple
 
+import colors
+
+FIRST_BG_COLOR = 0
+FIRST_FG_COLOR = 14
 TILE_SIZE = 8           # 8 or 16
 PIXEL_SCALE = 24        # visual size of each pixel
 PALETTE = [
-    '#000000', '#ffffff', '#ff0000', '#00ff00',
-    '#0000ff', '#ffff00', '#ff00ff', '#00ffff',
-    '#808080', '#ffa500', '#800080', '#8b4513',
+    '#000000', '#3eb849', '#74d07d',
+    '#5955e0', '#8076f1', '#b95e51', '#65dbef',
+    '#db6559', '#ff897d', '#ccc35e', '#ded087',
+    '#3aa241', '#b766b5', '#cccccc', '#ffffff',
 ]
 
 
 class TileEditor:
-    def __init__(self, size: int = TILE_SIZE):
+    def __init__(self, parent, size: int = TILE_SIZE):
+        self.parent = parent
         self.size = size
         self.current_fg_color_label = None
-        self.current_fg_color = PALETTE[1]
+        self.current_fg_color = PALETTE[FIRST_FG_COLOR]
         self.current_bg_color_label = None
-        self.current_bg_color = PALETTE[0]
+        self.current_bg_color = PALETTE[FIRST_BG_COLOR]
         self.last_fg_button = None
         self.last_bg_button = None
         self.grid: List[List[str]] = [
-            ['#ffffff' for _ in range(size)]
+            [self.current_bg_color for _ in range(size)]
             for _ in range(size)
         ]
 
@@ -29,13 +35,14 @@ class TileEditor:
         self.build_ui()
 
     def build_ui(self) -> None:
-        ui.label(f'{self.size}x{self.size} Tile Editor').classes(
-            'text-2xl font-bold'
-        )
+        with self.parent:
+            ui.label(f'{self.size}x{self.size} Tile Editor').classes(
+                'text-2xl font-bold'
+            )
 
-        with ui.row().classes('items-start gap-8'):
-            self.build_canvas()
-            self.build_sidebar()
+            with ui.row().classes('items-start gap-8'):
+                self.build_canvas()
+                self.build_sidebar()
 
     def build_canvas(self) -> None:
         with ui.column().classes('gap-1'):
@@ -74,31 +81,41 @@ class TileEditor:
 
                     self.pixel_refs.append(row_refs)
 
+    def get_label(self, color):
+        sel = ((color == self.current_fg_color) << 0) | ((color == self.current_bg_color) << 1)
+        return ['', 'F', 'B', 'FB'][sel]
+
     def build_sidebar(self) -> None:
         with ui.column().classes('gap-4 min-w-[260px]'):
             ui.label('Palette').classes('text-lg font-semibold')
 
             with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
                 for index, color in enumerate(PALETTE):
-                    ui.button('') \
+                    sel = ((color == self.current_fg_color) << 0) | ((color == self.current_bg_color) << 1)
+                    # chicungunha
+                    button = ui.button(self.get_label(color)) \
                         .style(
                             f'''
                             width: 40px;
                             height: 40px;
+                            color: black;
                             background-color: {color};
                             border: 2px solid #444;
+                            overflow: hidden;
                             '''
                         ) \
-                        .props(f'{color=}') \
+                        .props(f'{color=} text-color={colors.get_text_color(color)}') \
                         .on('click', lambda e, i=index, c=color: self.select_fg_color(e, i, c)) \
                         .on('contextmenu.prevent', lambda e, i=index, c=color: self.select_bg_color(e, i, c))
+                    if sel & 1: self.last_fg_button = button
+                    if sel & 2: self.last_bg_button = button
 
             self.current_fg_color_label = ui.label(
-                f'Current foreground color: {self.current_fg_color} (1)'
-            ).classes('font-mono').style('color: red;')
+                f'Current foreground color: {self.current_fg_color} ({PALETTE.index(self.current_fg_color) + 1})'
+            ).classes('font-mono')
             self.current_bg_color_label = ui.label(
-                f'Current background color: {self.current_bg_color} (0)'
-            ).classes('font-mono').style('color: blue;')
+                f'Current background color: {self.current_bg_color} ({PALETTE.index(self.current_bg_color) + 1})'
+            ).classes('font-mono')
 
             ui.separator()
 
@@ -122,23 +139,25 @@ class TileEditor:
                 ui.button('Export RGB', on_click=self.export_rgb)
 
     def select_fg_color(self, event, index, color: str) -> None:
-        if self.last_fg_button:
-            self.last_fg_button.style('border: 2px solid #444;')
-        event.sender.style('border: 4px solid red;')
+        tmp = self.current_fg_color
         self.current_fg_color = color
+        if self.last_fg_button:
+            self.last_fg_button.set_text(self.get_label(tmp))
+        event.sender.set_text(self.get_label(color))
         self.current_fg_color_label.set_text(
-            f'Current foreground color: {color} ({index})'
-        ).style('color: red;')
+            f'Current foreground color: {self.current_fg_color} ({PALETTE.index(self.current_fg_color) + 1})'
+        )
         self.last_fg_button = event.sender
 
     def select_bg_color(self, event, index, color: str) -> None:
-        if self.last_bg_button:
-            self.last_bg_button.style('border: 2px solid #444;')
-        event.sender.style('border: 4px solid blue;')
+        tmp = self.current_bg_color
         self.current_bg_color = color
-        self.current_bg_color_label.set_text(
-            f'Current background color: {color} ({index})'
-        ).style('color: blue;')
+        if self.last_bg_button:
+            self.last_bg_button.set_text(self.get_label(tmp))
+        event.sender.set_text(self.get_label(color))
+        self.current_fg_color_label.set_text(
+            f'Current foreground color: {self.current_bg_color} ({PALETTE.index(self.current_bg_color) + 1})'
+        )
         self.last_bg_button = event.sender
 
     def paint(self, color, x: int, y: int) -> None:
@@ -201,7 +220,8 @@ class TileEditor:
         )
 
 
-TileEditor()
+with ui.row():
+    TileEditor(ui.column(), 8)
 
 ui.run(
     title='NiceGUI Tile Editor',
