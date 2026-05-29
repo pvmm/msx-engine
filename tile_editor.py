@@ -25,6 +25,7 @@ class TileEditor:
         self.current_bg_color = PALETTE[FIRST_BG_COLOR]
         self.last_fg_button = None
         self.last_bg_button = None
+        self.last_tool_button = None
         self.grid: List[List[str]] = [
             [self.current_bg_color for _ in range(size)]
             for _ in range(size)
@@ -104,6 +105,7 @@ class TileEditor:
                             overflow: hidden;
                             '''
                         ) \
+                        .tooltip(color) \
                         .props(f'{color=} text-color={colors.get_text_color(color)}') \
                         .on('click', lambda e, i=index, c=color: self.select_fg_color(e, i, c)) \
                         .on('contextmenu.prevent', lambda e, i=index, c=color: self.select_bg_color(e, i, c))
@@ -119,11 +121,10 @@ class TileEditor:
 
             ui.separator()
 
-            ui.label('Tools').classes('text-lg font-semibold')
-
             with ui.row().classes('gap-2'):
-                ui.button('Clear', on_click=self.clear)
-                ui.button('Fill', on_click=self.fill)
+                ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=p')
+                ui.button(icon='fa-solid fa-fill-drip', on_click=self.toggle_tool).tooltip('fill').props('tool=f')
+                ui.button(icon='fa-solid fa-trash', on_click=self.clear).tooltip('delete')
 
             ui.separator()
 
@@ -137,6 +138,13 @@ class TileEditor:
             with ui.row().classes('gap-2'):
                 ui.button('Export Hex', on_click=self.export_hex)
                 ui.button('Export RGB', on_click=self.export_rgb)
+
+    def toggle_tool(self, event) -> None:
+        if self.last_tool_button:
+            self.last_tool_button._props.pop('outline', None)
+        event.sender.props('outline')
+        self.current_tool = event.sender._props.get('tool')
+        self.last_tool_button = event.sender
 
     def select_fg_color(self, event, index, color: str) -> None:
         tmp = self.current_fg_color
@@ -218,6 +226,7 @@ class TileEditor:
             int(color[2:4], 16),
             int(color[4:6], 16),
         )
+
 
 if __name__ == '__main__':
     with ui.row():

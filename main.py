@@ -184,6 +184,9 @@ second_pattern_checkbox = None
 r18_checkbox = None
 scroll_pixels_radio = None
 
+# Inject your personal Font Awesome Kit script into the document head
+ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
+
 with ui.tabs() as tabs:
     ui.tab('p', label='Project', icon='rocket_launch')
     ui.tab('t', label='Tileset', icon='apps')
