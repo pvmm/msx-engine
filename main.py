@@ -1,5 +1,5 @@
 from nicegui import ui
-
+from tile_editor import TileEditor
 
 tiles_changed = False
 target_options = ['MSX1', 'MSX2 or above']
@@ -265,6 +265,9 @@ with ui.tab_panels(tabs, value='p').classes('w-full'):
                 ui.checkbox('ROM bank switching', on_change=lambda e: toggle_megarom(e))
                 with ui.column().classes('ml-8 gap-1'):
                     ui.radio(rom_options, value=rom_options[0], on_change=lambda e: change_frame_rate(e)).props('inline').disable()
+
+    with ui.tab_panel('t'):
+        TileEditor(ui.column(), 8)
 
     with ui.tab_panel('a'):
         ui.label('Infos')

@@ -219,12 +219,10 @@ class TileEditor:
             int(color[4:6], 16),
         )
 
-
-with ui.row():
-    TileEditor(ui.column(), 8)
-
-ui.run(
-    title='NiceGUI Tile Editor',
-    reload=False,
-)
-
+if __name__ == '__main__':
+    with ui.row():
+        TileEditor(ui.column(), 8)
+    ui.run(
+        title='NiceGUI Tile Editor',
+        reload=False,
+    )
