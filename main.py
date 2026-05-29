@@ -204,66 +204,66 @@ with ui.tab_panels(tabs, value='p').classes('w-full'):
 
         header('Summary')
         with ui.column().classes('ml-8 gap-1'):
-            with ui.row().classes('items-center gap-2 flex-nowrap'):
+            with ui.row().classes('items-center flex-nowrap'):
                 ui.label('Target platform:')
                 target_badge = ui.badge(target, color='blue')
-            with ui.row().classes('items-center gap-2 flex-nowrap'):
+            with ui.row().classes('items-center flex-nowrap'):
                 ui.label('ROM size:')
                 ui.badge('32K', color='green')
-            with ui.row().classes('items-center gap-2 flex-nowrap'):
+            with ui.row().classes('items-center flex-nowrap'):
                 ui.label('Page size:')
                 ui.badge('16K', color='red')
-            with ui.row().classes('items-center gap-2 flex-nowrap'):
+            with ui.row().classes('items-center flex-nowrap'):
                 ui.label('Amount of tiles available:')
                 scrolling_tiles_badge = ui.badge(available_tiles, color='orange')
-            with ui.row().classes('items-center gap-2 flex-nowrap'):
+            with ui.row().classes('items-center flex-nowrap'):
                 ui.label('Frames per second:')
                 fps_badge = ui.badge(fps_options[fps], color='brown')
                 frame_rate_badge = ui.badge(frame_rate, color='brown')
                 frame_rate_badge.visible = force_frame_rate
 
         header('Settings')
-        with ui.column().classes('ml-8 gap-1'):
+        with ui.column().classes('ml-8'):
             header('Display engine')
-            with ui.column().classes('ml-8 gap-1'):
+            with ui.column().classes('ml-8'):
                 second_pattern_checkbox = ui.checkbox('Reserve second pattern table in VRAM for next frame', on_change=lambda e: reserve_second_pattern_table(e))
-                with ui.column().classes('ml-8 gap-1'):
-                    with ui.row().classes('items-center gap-2 flex-nowrap'):
+                with ui.column().classes('ml-8'):
+                    with ui.row().classes('items-center flex-nowrap'):
                         ui.icon('warning', color='warning').classes('text-xl')
                         ui.label('This option may double the required VRAM data transfer when updating tile patterns dinamically.')
                 ui.checkbox('105 color mode', on_change=lambda e: set_105_color_mode(e))
-                with ui.column().classes('ml-8 gap-1'):
-                    with ui.row().classes('items-center gap-2 flex-nowrap'):
+                with ui.column().classes('ml-8'):
+                    with ui.row().classes('items-center flex-nowrap'):
                         ui.icon('warning', color='warning').classes('text-xl')
                         ui.label('This option reduces color clash but also reduces the game frame rate by half and may cause flicker.')
                 ui.checkbox('Detach pattern layers for each third of screen region', on_change=lambda e: detach_pattern_layers(e))
-                with ui.column().classes('ml-8 gap-1'):
-                    with ui.row().classes('items-center gap-2 flex-nowrap'):
+                with ui.column().classes('ml-8'):
+                    with ui.row().classes('items-center flex-nowrap'):
                         ui.icon('info', color='black').classes('text-xl')
                         ui.label('Select a distinct pattern table for each screen region if tiles are different in each region.')
 
                 header('MSX2 features')
-                with ui.column().classes('ml-8 gap-1'):
+                with ui.column().classes('ml-8'):
                     ui.checkbox('Allow palette change', on_change=lambda e: allow_palette_change(e))
                     r18_checkbox = ui.checkbox('R#18 hardware scroll', on_change=lambda e: set_r18(e)).disable()
-                    with ui.column().classes('ml-8 gap-1'):
-                        with ui.row().classes('items-center gap-2 flex-nowrap'):
+                    with ui.column().classes('ml-8'):
+                        with ui.row().classes('items-center flex-nowrap'):
                             ui.icon('info', color='black').classes('text-xl')
                             ui.label('This option will cause visible artifacts on the left and right edges of the screen.')
 
                     ui.checkbox('Force specific frame rate', on_change=lambda e: force_specific_frame_rate(e))
-                    with ui.column().classes('ml-8 gap-1'):
+                    with ui.column().classes('ml-8'):
                         frame_rate_radio = ui.radio(frame_rate_options, value=frame_rate_options[0], on_change=lambda e: change_frame_rate(e)).props('inline').disable()
 
 
                 header('Amount of pixels to scroll each frame')
-                with ui.column().classes('ml-8 gap-1'):
+                with ui.column().classes('ml-8'):
                     scroll_pixels_radio = ui.radio([1, 2, 4, 8], value=8, on_change=lambda e: set_scroll_in_pixels(e)).props('inline').disable()
 
             ui.label('Memory layout')
-            with ui.column().classes('ml-8 gap-1'):
+            with ui.column().classes('ml-8'):
                 ui.checkbox('ROM bank switching', on_change=lambda e: toggle_megarom(e))
-                with ui.column().classes('ml-8 gap-1'):
+                with ui.column().classes('ml-8'):
                     ui.radio(rom_options, value=rom_options[0], on_change=lambda e: change_frame_rate(e)).props('inline').disable()
 
     with ui.tab_panel('t'):
