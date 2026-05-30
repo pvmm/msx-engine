@@ -1,4 +1,4 @@
-def get_color_values(hex_string: str) -> [int, int, int]:
+def hex_to_rgb(hex_string: str) -> [int, int, int]:
     hex_string = hex_string.lstrip('#')
     if len(hex_string) != 6:
         raise ValueError("Hex string must contain 6 hexadecimal digits")
@@ -8,6 +8,6 @@ def get_color_values(hex_string: str) -> [int, int, int]:
     return (r, g, b)
 
 def get_text_color(bg_color: str) -> str:
-    r, g, b = get_color_values(bg_color)
+    r, g, b = hex_to_rgb(bg_color)
     luma = (r * 0.299 + g * 0.587 + b * 0.114) / 255
     return 'black' if luma > 0.5 else 'white'

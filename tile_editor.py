@@ -19,13 +19,12 @@ class TileEditor:
     def __init__(self, parent, size: int = TILE_SIZE):
         self.parent = parent
         self.size = size
-        self.current_fg_color_label = None
-        self.current_fg_color = PALETTE[FIRST_FG_COLOR]
-        self.current_bg_color_label = None
-        self.current_bg_color = PALETTE[FIRST_BG_COLOR]
+        self.current_fg_color = FIRST_FG_COLOR
+        self.current_bg_color = FIRST_BG_COLOR
         self.last_fg_button = None
         self.last_bg_button = None
         self.last_tool_button = None
+        self.current_tool = 'pb'
         self.grid: List[List[str]] = [
             [self.current_bg_color for _ in range(size)]
             for _ in range(size)
@@ -37,6 +36,9 @@ class TileEditor:
 
     def build_ui(self) -> None:
         with self.parent:
+            #ui.add_head_html('<link rel="stylesheet" href="https://cloudflare.com">')
+            #ui.add_head_html('<link href="https://cdn.jsdelivr.net/themify-icons/0.1.2/css/themify-icons.css" rel="stylesheet" />')
+
             ui.label(f'{self.size}x{self.size} Tile Editor').classes(
                 'text-2xl font-bold'
             )
@@ -61,7 +63,7 @@ class TileEditor:
                                     f'''
                                     width: {PIXEL_SCALE}px;
                                     height: {PIXEL_SCALE}px;
-                                    background-color: {self.grid[y][x]};
+                                    background-color: {PALETTE[self.grid[y][x]]};
                                     border: 1px solid #444;
                                     border-radius: 0;
                                     cursor: pointer;
@@ -82,9 +84,9 @@ class TileEditor:
 
                     self.pixel_refs.append(row_refs)
 
-    def get_label(self, color):
-        sel = ((color == self.current_fg_color) << 0) | ((color == self.current_bg_color) << 1)
-        return ['', 'F', 'B', 'FB'][sel]
+    def get_label(self, index):
+        n = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
+        return ['', 'F', 'B', 'FB'][n]
 
     def build_sidebar(self) -> None:
         with ui.column().classes('gap-4 min-w-[260px]'):
@@ -92,9 +94,9 @@ class TileEditor:
 
             with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
                 for index, color in enumerate(PALETTE):
-                    sel = ((color == self.current_fg_color) << 0) | ((color == self.current_bg_color) << 1)
+                    sel = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
                     # chicungunha
-                    button = ui.button(self.get_label(color)) \
+                    button = ui.button(self.get_label(index)) \
                         .style(
                             f'''
                             width: 40px;
@@ -107,24 +109,18 @@ class TileEditor:
                         ) \
                         .tooltip(color) \
                         .props(f'{color=} text-color={colors.get_text_color(color)}') \
-                        .on('click', lambda e, i=index, c=color: self.select_fg_color(e, i, c)) \
-                        .on('contextmenu.prevent', lambda e, i=index, c=color: self.select_bg_color(e, i, c))
+                        .on('click', lambda e, i=index: self.select_fg_color(e, i)) \
+                        .on('contextmenu.prevent', lambda e, i=index: self.select_bg_color(e, i))
                     if sel & 1: self.last_fg_button = button
                     if sel & 2: self.last_bg_button = button
-
-            self.current_fg_color_label = ui.label(
-                f'Current foreground color: {self.current_fg_color} ({PALETTE.index(self.current_fg_color) + 1})'
-            ).classes('font-mono')
-            self.current_bg_color_label = ui.label(
-                f'Current background color: {self.current_bg_color} ({PALETTE.index(self.current_bg_color) + 1})'
-            ).classes('font-mono')
 
             ui.separator()
 
             with ui.row().classes('gap-2'):
-                ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=p')
-                ui.button(icon='fa-solid fa-fill-drip', on_click=self.toggle_tool).tooltip('fill').props('tool=f')
-                ui.button(icon='fa-solid fa-trash', on_click=self.clear).tooltip('delete')
+                self.last_tool_button = \
+                        ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=pb outline')
+                ui.button(icon='fa-solid fa-fill-drip', on_click=self.toggle_tool).tooltip('fill').props('tool=fl')
+                ui.button(icon='fa-solid fa-trash', on_click=self.clear).tooltip('delete').props('color=red')
 
             ui.separator()
 
@@ -146,35 +142,29 @@ class TileEditor:
         self.current_tool = event.sender._props.get('tool')
         self.last_tool_button = event.sender
 
-    def select_fg_color(self, event, index, color: str) -> None:
+    def select_fg_color(self, event, index: int) -> None:
         tmp = self.current_fg_color
-        self.current_fg_color = color
+        self.current_fg_color = index
         if self.last_fg_button:
             self.last_fg_button.set_text(self.get_label(tmp))
-        event.sender.set_text(self.get_label(color))
-        self.current_fg_color_label.set_text(
-            f'Current foreground color: {self.current_fg_color} ({PALETTE.index(self.current_fg_color) + 1})'
-        )
+        event.sender.set_text(self.get_label(index))
         self.last_fg_button = event.sender
 
-    def select_bg_color(self, event, index, color: str) -> None:
+    def select_bg_color(self, event, index: int) -> None:
         tmp = self.current_bg_color
-        self.current_bg_color = color
+        self.current_bg_color = index
         if self.last_bg_button:
             self.last_bg_button.set_text(self.get_label(tmp))
-        event.sender.set_text(self.get_label(color))
-        self.current_fg_color_label.set_text(
-            f'Current foreground color: {self.current_bg_color} ({PALETTE.index(self.current_bg_color) + 1})'
-        )
+        event.sender.set_text(self.get_label(index))
         self.last_bg_button = event.sender
 
-    def paint(self, color, x: int, y: int) -> None:
-        self.grid[y][x] = color
+    def paint(self, index, x: int, y: int) -> None:
+        self.grid[y][x] = index
         self.pixel_refs[y][x].style(
             f'''
             width: {PIXEL_SCALE}px;
             height: {PIXEL_SCALE}px;
-            background-color: {color};
+            background-color: {PALETTE[index]};
             border: 1px solid #444;
             border-radius: 0;
             cursor: pointer;
@@ -210,25 +200,16 @@ class TileEditor:
         for row in self.grid:
             rgb_row = []
 
-            for color in row:
-                rgb_row.append(str(self.hex_to_rgb(color)))
+            for index in row:
+                rgb_row.append(str(colors.hex_to_rgb(PALETTE[index])))
 
             lines.append(', '.join(rgb_row))
 
         self.output.value = '\n'.join(lines)
 
-    @staticmethod
-    def hex_to_rgb(color: str) -> Tuple[int, int, int]:
-        color = color.lstrip('#')
-
-        return (
-            int(color[0:2], 16),
-            int(color[2:4], 16),
-            int(color[4:6], 16),
-        )
-
 
 if __name__ == '__main__':
+    ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
     with ui.row():
         TileEditor(ui.column(), 8)
     ui.run(
