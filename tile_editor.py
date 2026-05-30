@@ -14,32 +14,59 @@ PALETTE = [
     '#3aa241', '#b766b5', '#cccccc', '#ffffff',
 ]
 
+class Row8x8:
+    def __init__(self):
+        self.pattern = 0
+        # color encoding = (foreground color index << 4) | background color index
+        self.colors = 0
+
+    def set_fg(self, x, index):
+        # toggle foreground pixel
+        self.pattern ^= 1 << (7 - x)
+        # replace foreground color
+        self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
+
+    def set_bg(self, _, index):
+        # replace background color
+        self.colors = (self.colors & 0xf0) | (index & 0x0f)
+
+    def __getitem__(self, x):
+        return self.colors if self.pattern & (1 << (7 - x)) else colors.select_bg(self.colors)
+
+
+class Tile8x8:
+    def __init__(self):
+        self.patterns: List[Row8x8] = [Row8x8() for _ in range(TILE_SIZE)]
+
+    def __getitem__(self, index):
+        return self.patterns[index]
+
+    def __setitem__(self, index, value):
+        self.patterns[index] = value
+
+    def set_fg(self, x, y, index):
+        self.patterns[y].set_fg(x, index)
+
+    def set_bg(self, x, y, index):
+        self.patterns[y].set_bg(x, index)
+
 
 class TileEditor:
-    def __init__(self, parent, size: int = TILE_SIZE):
+    def __init__(self, parent):
         self.parent = parent
-        self.size = size
         self.current_fg_color = FIRST_FG_COLOR
         self.current_bg_color = FIRST_BG_COLOR
         self.last_fg_button = None
         self.last_bg_button = None
         self.last_tool_button = None
         self.current_tool = 'pb'
-        self.grid: List[List[str]] = [
-            [self.current_bg_color for _ in range(size)]
-            for _ in range(size)
-        ]
-
+        self.grid = Tile8x8()
         self.pixel_refs: List[List[ui.element]] = []
-
         self.build_ui()
 
     def build_ui(self) -> None:
         with self.parent:
-            #ui.add_head_html('<link rel="stylesheet" href="https://cloudflare.com">')
-            #ui.add_head_html('<link href="https://cdn.jsdelivr.net/themify-icons/0.1.2/css/themify-icons.css" rel="stylesheet" />')
-
-            ui.label(f'{self.size}x{self.size} Tile Editor').classes(
+            ui.label(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor').classes(
                 'text-2xl font-bold'
             )
 
@@ -52,34 +79,20 @@ class TileEditor:
             ui.label('Canvas').classes('text-lg font-semibold')
 
             with ui.column().classes('gap-0'):
-                for y in range(self.size):
+                for y in range(TILE_SIZE):
                     row_refs = []
 
                     with ui.row().classes('gap-0'):
-                        for x in range(self.size):
-                            pixel = (
-                                ui.card()
-                                .style(
-                                    f'''
-                                    width: {PIXEL_SCALE}px;
-                                    height: {PIXEL_SCALE}px;
-                                    background-color: {PALETTE[self.grid[y][x]]};
-                                    border: 1px solid #444;
-                                    border-radius: 0;
-                                    cursor: pointer;
-                                    '''
-                                )
+                        for x in range(TILE_SIZE):
+                            pixel = ui.card().on(
+                                'mousedown', lambda e, px=x, py=y: self.drag_paint(e, px, py)
+                            ).on(
+                                'mouseover', lambda e, px=x, py=y: self.drag_paint(e, px, py)
+                            ).on(
+                                'contextmenu.prevent', lambda: None
                             )
-                            pixel.on(
-                                'mousedown',
-                                lambda e, px=x, py=y: self.drag_paint(e, px, py)
-                            )
-                            pixel.on(
-                                'mouseover',
-                                lambda e, px=x, py=y: self.drag_paint(e, px, py)
-                            )
-                            pixel.on('contextmenu.prevent', lambda: None)
 
+                            self.set_pixel_style(pixel, self.grid[y][x])
                             row_refs.append(pixel)
 
                     self.pixel_refs.append(row_refs)
@@ -158,32 +171,44 @@ class TileEditor:
         event.sender.set_text(self.get_label(index))
         self.last_bg_button = event.sender
 
-    def paint(self, index, x: int, y: int) -> None:
-        self.grid[y][x] = index
-        self.pixel_refs[y][x].style(
+    def set_pixel_style(self, element, combined) -> None:
+        fg, bg = colors.divide(combined)
+        element.style(
             f'''
             width: {PIXEL_SCALE}px;
             height: {PIXEL_SCALE}px;
-            background-color: {PALETTE[index]};
+            background-color: {PALETTE[fg or bg]};
             border: 1px solid #444;
             border-radius: 0;
             cursor: pointer;
             '''
         )
 
+    def paint(self, index, x: int, y: int) -> None:
+        self.grid.set_fg(x, y, index)
+        self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
+
+    def paint_bg(self, index, x: int, y: int) -> None:
+        self.grid.set_bg(x, y, index)
+        for x in range(0, TILE_SIZE):
+            pixel = self.grid[y][x]
+            self.set_pixel_style(self.pixel_refs[y][x], pixel)
+
     def drag_paint(self, event, x: int, y: int) -> None:
         buttons = event.args.get('buttons', 0)
-        if buttons:
-            self.paint(self.current_fg_color if buttons == 1 else self.current_bg_color, x, y)
+        if buttons == 1:
+            self.paint(self.current_fg_color, x, y)
+        elif buttons == 2:
+            self.paint_bg(self.current_bg_color, x, y)
 
     def clear(self) -> None:
-        for y in range(self.size):
-            for x in range(self.size):
+        for y in range(TILE_SIZE):
+            for x in range(TILE_SIZE):
                 self.paint(self.current_bg_color, x, y)
 
     def fill(self) -> None:
-        for y in range(self.size):
-            for x in range(self.size):
+        for y in range(TILE_SIZE):
+            for x in range(TILE_SIZE):
                 self.paint(self.current_fg_color, x, y)
 
     def export_hex(self) -> None:
@@ -211,7 +236,7 @@ class TileEditor:
 if __name__ == '__main__':
     ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
     with ui.row():
-        TileEditor(ui.column(), 8)
+        TileEditor(ui.column())
     ui.run(
         title='NiceGUI Tile Editor',
         reload=False,
