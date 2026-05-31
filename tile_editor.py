@@ -14,6 +14,14 @@ PALETTE = [
     '#3aa241', '#b766b5', '#cccccc', '#ffffff',
 ]
 
+async def show_message_dialog(message):
+    with ui.dialog() as dialog, ui.card():
+        ui.label(message)
+        with ui.row():
+            ui.button('OK', on_click=lambda: dialog.submit('OK'))
+    result = await dialog
+
+
 class Row8x8:
     def __init__(self):
         self.pattern = 0
@@ -86,9 +94,9 @@ class TileEditor:
                     with ui.row().classes('gap-0'):
                         for x in range(TILE_SIZE):
                             pixel = ui.card().on(
-                                'mousedown', lambda e, px=x, py=y: self.drag_paint(e, px, py)
+                                'mousedown', lambda e, px=x, py=y: self.click_on_canvas(e, px, py)
                             ).on(
-                                'mouseover', lambda e, px=x, py=y: self.drag_paint(e, px, py)
+                                'mouseover', lambda e, px=x, py=y: self.click_on_canvas(e, px, py)
                             ).on(
                                 'contextmenu.prevent', lambda: None
                             )
@@ -131,6 +139,7 @@ class TileEditor:
             ui.separator()
 
             with ui.row().classes('gap-2'):
+                # outline default tool
                 self.last_tool_button = \
                         ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=pb outline')
                 ui.button(icon='fa-solid fa-fill-drip', on_click=self.toggle_tool).tooltip('fill').props('tool=fl')
@@ -206,6 +215,16 @@ class TileEditor:
             self.paint(self.current_fg_color, x, y)
         elif buttons == 2:
             self.paint_bg(self.current_bg_color, x, y)
+
+    async def click_on_canvas(self, event, x: int, y:int) -> None:
+        # discard mouseover when no button is pressed
+        buttons = event.args.get('buttons', 0)
+        if buttons == 0: return
+        tool = self.last_tool_button._props.get('tool')
+        if tool == 'pb':
+            self.drag_paint(event, x, y)
+        else:
+            await show_message_dialog('Not implemented yet.')
 
     def clear(self) -> None:
         for y in range(TILE_SIZE):
