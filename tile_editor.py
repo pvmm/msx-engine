@@ -14,6 +14,9 @@ PALETTE = [
     '#3aa241', '#b766b5', '#cccccc', '#ffffff',
 ]
 
+# Common settings
+toggle_mode = False
+
 async def show_message_dialog(message):
     with ui.dialog() as dialog, ui.card():
         ui.label(message)
@@ -24,16 +27,23 @@ async def show_message_dialog(message):
 
 class Row8x8:
     def __init__(self):
+        # toggle mode: activate an active pixel again to deactivate it
         self.pattern = 0
         # color encoding = (foreground color index << 4) | background color index
         self.colors = 0
 
     def set_fg(self, x, index):
-        # toggle foreground pixel
-        if index == (self.colors >> 4) & 0x0f:
+        # replace foreground color?
+        if index != (self.colors >> 4) & 0x0f:
+            self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
+        if toggle_mode:
+            # toggle foreground pixel
             self.pattern ^= 1 << (7 - x)
-        # replace foreground color
-        self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
+        else:
+            self.pattern |= 1 << (7 - x)
+
+    def unset_fg(self, x):
+        self.pattern &= ~(1 << (7 - x))
 
     def set_bg(self, _, index):
         # replace background color
@@ -55,6 +65,9 @@ class Tile8x8:
 
     def set_fg(self, x, y, index):
         self.patterns[y].set_fg(x, index)
+
+    def unset_fg(self, x, y):
+        self.patterns[y].unset_fg(x)
 
     def set_bg(self, x, y, index):
         self.patterns[y].set_bg(x, index)
@@ -142,7 +155,7 @@ class TileEditor:
                 # outline default tool
                 self.last_tool_button = \
                         ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=pb outline')
-                ui.button(icon='fa-solid fa-fill-drip', on_click=self.toggle_tool).tooltip('fill').props('tool=fl')
+                ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
                 ui.button(icon='fa-solid fa-trash', on_click=self.clear).tooltip('delete').props('color=red')
 
             ui.separator()
@@ -181,7 +194,7 @@ class TileEditor:
         event.sender.set_text(self.get_label(index))
         self.last_bg_button = event.sender
 
-    def set_pixel_style(self, element, combined) -> None:
+    def set_pixel_style(self, element, combined: int) -> None:
         fg, bg = colors.divide(combined)
         element.style(
             f'''
@@ -194,7 +207,12 @@ class TileEditor:
             '''
         )
 
-    def paint(self, index, x: int, y: int) -> None:
+    def repaint(self) -> None:
+        for y in range(0, TILE_SIZE):
+            for x in range(0, TILE_SIZE):
+                self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
+
+    def paint(self, index: int, x: int, y: int) -> None:
         self.grid.set_fg(x, y, index)
         self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
         # display foreground color clash
@@ -202,19 +220,22 @@ class TileEditor:
             pixel = self.grid[y][x]
             self.set_pixel_style(self.pixel_refs[y][x], pixel)
 
-    def paint_bg(self, index, x: int, y: int) -> None:
+    def paint_bg(self, index: int, x: int, y: int) -> None:
         self.grid.set_bg(x, y, index)
         # display background color clash
         for x in range(0, TILE_SIZE):
             pixel = self.grid[y][x]
             self.set_pixel_style(self.pixel_refs[y][x], pixel)
 
-    def drag_paint(self, event, x: int, y: int) -> None:
-        buttons = event.args.get('buttons', 0)
+    def drag_paint(self, buttons: int, x: int, y: int) -> None:
         if buttons == 1:
             self.paint(self.current_fg_color, x, y)
         elif buttons == 2:
             self.paint_bg(self.current_bg_color, x, y)
+
+    def erase(self, buttons: int, x: int, y: int) -> None:
+        self.grid.unset_fg(x, y)
+        self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
     async def click_on_canvas(self, event, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
@@ -222,9 +243,12 @@ class TileEditor:
         if buttons == 0: return
         tool = self.last_tool_button._props.get('tool')
         if tool == 'pb':
-            self.drag_paint(event, x, y)
-        else:
-            await show_message_dialog('Not implemented yet.')
+            self.drag_paint(buttons, x, y)
+            return
+        if tool == 'er':
+            self.erase(buttons, x, y)
+            return
+        await show_message_dialog('Not implemented yet.')
 
     def clear(self) -> None:
         for y in range(TILE_SIZE):
