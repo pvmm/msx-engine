@@ -3,12 +3,12 @@ from typing import List, Tuple
 
 import colors
 
-FIRST_BG_COLOR = 0
-FIRST_FG_COLOR = 14
+FIRST_BG_COLOR = 1
+FIRST_FG_COLOR = 15
 TILE_SIZE = 8           # 8 or 16
 PIXEL_SCALE = 24        # visual size of each pixel
 PALETTE = [
-    '#000000', '#3eb849', '#74d07d',
+    '#000000', '#000000', '#3eb849', '#74d07d',
     '#5955e0', '#8076f1', '#b95e51', '#65dbef',
     '#db6559', '#ff897d', '#ccc35e', '#ded087',
     '#3aa241', '#b766b5', '#cccccc', '#ffffff',
@@ -22,7 +22,8 @@ class Row8x8:
 
     def set_fg(self, x, index):
         # toggle foreground pixel
-        self.pattern ^= 1 << (7 - x)
+        if index == (self.colors >> 4) & 0x0f:
+            self.pattern ^= 1 << (7 - x)
         # replace foreground color
         self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
 
@@ -106,7 +107,7 @@ class TileEditor:
             ui.label('Palette').classes('text-lg font-semibold')
 
             with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
-                for index, color in enumerate(PALETTE):
+                for index, color in enumerate(PALETTE[1:], start=1):
                     sel = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
                     # chicungunha
                     button = ui.button(self.get_label(index)) \
@@ -187,9 +188,14 @@ class TileEditor:
     def paint(self, index, x: int, y: int) -> None:
         self.grid.set_fg(x, y, index)
         self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
+        # display foreground color clash
+        for x in range(0, TILE_SIZE):
+            pixel = self.grid[y][x]
+            self.set_pixel_style(self.pixel_refs[y][x], pixel)
 
     def paint_bg(self, index, x: int, y: int) -> None:
         self.grid.set_bg(x, y, index)
+        # display background color clash
         for x in range(0, TILE_SIZE):
             pixel = self.grid[y][x]
             self.set_pixel_style(self.pixel_refs[y][x], pixel)
