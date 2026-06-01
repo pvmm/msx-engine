@@ -6,16 +6,17 @@ import v9918
 
 # constants
 PIXEL_SCALE = 32        # visual size of each pixel
-SPACES = '\u00A0\u00A0\u00A0\u00A0'
 
-# toggle mode
+# toggle mode: switches between paintbrush and eraser automatically by context
 TOGGLE_MODE = False
 DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 
 # Common settings
 toggle_mode_status = OFF
 
-# Switches between paintbrush and eraser by context
+
+def menu_item(text):
+    return text + '\u00A0\u00A0\u00A0\u00A0'
 
 
 async def show_message_dialog(message):
@@ -24,6 +25,15 @@ async def show_message_dialog(message):
         with ui.row():
             ui.button('OK', on_click=lambda: dialog.submit('OK'))
     result = await dialog
+
+
+async def show_confirm_dialog(message):
+    with ui.dialog() as dialog, ui.card():
+        ui.label(message)
+        with ui.row():
+            ui.button('YES', on_click=lambda: dialog.submit('yes'))
+            ui.button('NO', on_click=lambda: dialog.submit('no'))
+    return await dialog
 
 
 # functions
@@ -50,6 +60,7 @@ class EraserProxy:
 class TileEditor:
     def __init__(self, parent):
         self.parent = parent
+        self.dirty = False
 
         self.current_fg_color = FIRST_FG_COLOR
         self.current_bg_color = FIRST_BG_COLOR
@@ -59,6 +70,7 @@ class TileEditor:
         self.last_tool_button = None
 
         self.eraser = EraserProxy()
+        self.confirm_erasing = True
 
         self.grid = Tile8x8()
         self.pixel_refs: List[List[ui.element]] = []
@@ -70,8 +82,11 @@ class TileEditor:
             with ui.row().classes('items-center flex-nowrap'):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
-                        ui.switch('Toggle smart paintbrush mode' + SPACES, value=not self.eraser.visible,
-                                  on_change=lambda e: self.toggle_eraser_tool(e))
+                        with ui.column():
+                            ui.switch(menu_item('Toggle smart paintbrush mode'), value=not self.eraser.visible,
+                                      on_change=lambda e: self.toggle_eraser_tool(e))
+                            ui.switch(menu_item('Confirm before erasing'), value=self.confirm_erasing,
+                                      on_change=lambda e: self.toggle_confirm_erasing(e))
                 ui.label(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor').classes(
                     'text-2xl font-bold'
                 )
@@ -135,13 +150,20 @@ class TileEditor:
 
             ui.separator()
 
-            with ui.row().classes('gap-2'):
+            with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
                 # outline default tool
-                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=pb outline')
+                text = 'paintbrush\nleft click: foreground color\nright click: background color'
+                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip(text).props('tool=pb outline')
                 self.last_tool_button = self.paintbrush
                 self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
                 self.eraser.visible = not TOGGLE_MODE
-                ui.button(icon='fa-solid fa-trash', on_click=self.clear).tooltip('delete').props('color=red')
+                text = 'inverter\nswitch foreground and background color and invert pattern (non destructable)'
+                ui.button(icon='fa-solid fa-plus-minus').tooltip(text)
+                text = 'mirror horizontally (non destructable)'
+                ui.button(icon='fa-solid fa-arrows-left-right', on_click=self.mirror_tile_horizontally).props('color=black').tooltip(text)
+                text = 'mirror vertically (non destructable)'
+                ui.button(icon='fa-solid fa-arrows-up-down', on_click=self.mirror_tile_vertically).props('color=black').tooltip(text)
+                ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=black').tooltip('erase tile completely')
 
             ui.separator()
 
@@ -160,6 +182,9 @@ class TileEditor:
         self.eraser.visible = not e.value
         if self.last_tool_button == self.eraser:
             self.select_tool(self.paintbrush)
+
+    def toggle_confirm_erasing(self, e) -> None:
+        self.confirm_erasing = e.value
 
     def select_tool(self, sender) -> None:
         if self.last_tool_button:
@@ -204,6 +229,10 @@ class TileEditor:
             for x in range(0, TILE_SIZE):
                 self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
+    def unpaint(self, x: int, y: int) -> None:
+        self.grid.unset_fg(x, y)
+        self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
+
     def paint(self, index: int, x: int, y: int) -> None:
         if not self.eraser.visible:
             global toggle_mode_status
@@ -233,10 +262,6 @@ class TileEditor:
         elif buttons == 2:
             self.paint_bg(self.current_bg_color, x, y)
 
-    def erase(self, buttons: int, x: int, y: int) -> None:
-        self.grid.unset_fg(x, y)
-        self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
-
     async def click_on_canvas(self, event, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
@@ -244,22 +269,30 @@ class TileEditor:
             global toggle_mode_status
             toggle_mode_status = OFF
             return
+        self.dirty = True
         tool = self.last_tool_button._props.get('tool')
         if tool == 'pb':
             return self.drag_paint(buttons, x, y)
         if tool == 'er':
-            return self.erase(buttons, x, y)
+            return self.unpaint(x, y)
         await show_message_dialog('Not implemented yet.')
 
-    def clear(self) -> None:
-        for y in range(TILE_SIZE):
-            for x in range(TILE_SIZE):
-                self.paint(self.current_bg_color, x, y)
+    async def clear(self) -> None:
+        result = await show_confirm_dialog('Are you sure you want to delete the tile?') \
+                if self.confirm_erasing and self.dirty else 'yes'
+        if result == 'yes':
+            for y in range(TILE_SIZE):
+                for x in range(TILE_SIZE):
+                    self.grid.unset_fg(x, y)
+            self.repaint()
 
-    def fill(self) -> None:
-        for y in range(TILE_SIZE):
-            for x in range(TILE_SIZE):
-                self.paint(self.current_fg_color, x, y)
+    def mirror_tile_horizontally(self) -> None:
+        self.grid.mirror_horizontally()
+        self.repaint()
+
+    def mirror_tile_vertically(self) -> None:
+        self.grid.mirror_vertically()
+        self.repaint()
 
     def export_hex(self) -> None:
         lines = []
@@ -285,6 +318,7 @@ class TileEditor:
 
 if __name__ == '__main__':
     ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
+    ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
     with ui.row():
         TileEditor(ui.column())
     ui.run(
