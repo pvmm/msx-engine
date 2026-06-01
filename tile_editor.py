@@ -6,13 +6,16 @@ import v9918
 
 # constants
 PIXEL_SCALE = 32        # visual size of each pixel
+SPACES = '\u00A0\u00A0\u00A0\u00A0'
 
 # toggle mode
+TOGGLE_MODE = False
 DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 
 # Common settings
-toggle_mode = False
 toggle_mode_status = OFF
+
+# Switches between paintbrush and eraser by context
 
 
 async def show_message_dialog(message):
@@ -40,25 +43,38 @@ def get_text_color(bg_color: str) -> str:
     return 'black' if luma > 0.5 else 'white'
 
 
+class EraserProxy:
+    visible = not TOGGLE_MODE
+
+
 class TileEditor:
     def __init__(self, parent):
         self.parent = parent
+
         self.current_fg_color = FIRST_FG_COLOR
         self.current_bg_color = FIRST_BG_COLOR
+
         self.last_fg_button = None
         self.last_bg_button = None
         self.last_tool_button = None
-        self.current_tool = 'pb'
+
+        self.eraser = EraserProxy()
+
         self.grid = Tile8x8()
         self.pixel_refs: List[List[ui.element]] = []
-        self.set_pixel_function = None
+        self.set_pixel_function = self.grid.set_fg
         self.build_ui()
 
     def build_ui(self) -> None:
         with self.parent:
-            ui.label(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor').classes(
-                'text-2xl font-bold'
-            )
+            with ui.row().classes('items-center flex-nowrap'):
+                with ui.button(icon='menu'):
+                    with ui.menu().props('auto-close'):
+                        ui.switch('Toggle smart paintbrush mode' + SPACES, value=not self.eraser.visible,
+                                  on_change=lambda e: self.toggle_eraser_tool(e))
+                ui.label(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor').classes(
+                    'text-2xl font-bold'
+                )
 
             with ui.row().classes('items-start gap-8'):
                 self.build_canvas()
@@ -121,9 +137,10 @@ class TileEditor:
 
             with ui.row().classes('gap-2'):
                 # outline default tool
-                self.last_tool_button = \
-                        ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=pb outline')
-                ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
+                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip('paintbrush').props('tool=pb outline')
+                self.last_tool_button = self.paintbrush
+                self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
+                self.eraser.visible = not TOGGLE_MODE
                 ui.button(icon='fa-solid fa-trash', on_click=self.clear).tooltip('delete').props('color=red')
 
             ui.separator()
@@ -139,12 +156,19 @@ class TileEditor:
                 ui.button('Export Hex', on_click=self.export_hex)
                 ui.button('Export RGB', on_click=self.export_rgb)
 
-    def toggle_tool(self, event) -> None:
+    def toggle_eraser_tool(self, e) -> None:
+        self.eraser.visible = not e.value
+        if self.last_tool_button == self.eraser:
+            self.select_tool(self.paintbrush)
+
+    def select_tool(self, sender) -> None:
         if self.last_tool_button:
             self.last_tool_button._props.pop('outline', None)
-        event.sender.props('outline')
-        self.current_tool = event.sender._props.get('tool')
-        self.last_tool_button = event.sender
+        sender.props('outline')
+        self.last_tool_button = sender
+
+    def toggle_tool(self, event) -> None:
+        self.select_tool(event.sender)
 
     def select_fg_color(self, event, index: int) -> None:
         tmp = self.current_fg_color
@@ -181,8 +205,7 @@ class TileEditor:
                 self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
     def paint(self, index: int, x: int, y: int) -> None:
-        global toggle_mode
-        if toggle_mode:
+        if not self.eraser.visible:
             global toggle_mode_status
             if toggle_mode_status == OFF:
                 toggle_mode_status = int(v9918.select_fg(self.grid[y][x]) == self.current_fg_color)
@@ -225,8 +248,7 @@ class TileEditor:
         if tool == 'pb':
             return self.drag_paint(buttons, x, y)
         if tool == 'er':
-            self.erase(buttons, x, y)
-            return
+            return self.erase(buttons, x, y)
         await show_message_dialog('Not implemented yet.')
 
     def clear(self) -> None:
