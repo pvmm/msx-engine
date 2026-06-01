@@ -112,16 +112,16 @@ class TileEditor:
                 ui.button(icon='fa-solid fa-plus-minus').tooltip(text)
 
                 text = 'shift tile left'
-                ui.button(icon='fa-solid fa-arrow-left').props('color=black').tooltip(text)
+                ui.button(icon='fa-solid fa-arrow-left', on_click=self.shift_left).props('color=black').tooltip(text)
 
                 text = 'shift tile right'
-                ui.button(icon='fa-solid fa-arrow-right').props('color=black').tooltip(text)
+                ui.button(icon='fa-solid fa-arrow-right', on_click=self.shift_right).props('color=black').tooltip(text)
 
                 text = 'shift tile up'
-                ui.button(icon='fa-solid fa-arrow-up').props('color=black').tooltip(text)
+                ui.button(icon='fa-solid fa-arrow-up', on_click=self.shift_up).props('color=black').tooltip(text)
 
                 text = 'shift tile down'
-                ui.button(icon='fa-solid fa-arrow-down').props('color=black').tooltip(text)
+                ui.button(icon='fa-solid fa-arrow-down', on_click=self.shift_down).props('color=black').tooltip(text)
 
                 text = 'mirror horizontally (non destructable)'
                 ui.button(icon='fa-solid fa-arrows-left-right', on_click=self.mirror_tile_horizontally).props('color=black').tooltip(text)
@@ -306,6 +306,22 @@ class TileEditor:
                 for x in range(TILE_SIZE):
                     self.grid.unset_fg(x, y)
             self.repaint()
+
+    def shift_left(self) -> None:
+        self.grid.shift_left()
+        self.repaint()
+
+    def shift_right(self) -> None:
+        self.grid.shift_right()
+        self.repaint()
+
+    def shift_up(self) -> None:
+        self.grid.shift_up()
+        self.repaint()
+
+    def shift_down(self) -> None:
+        self.grid.shift_down()
+        self.repaint()
 
     def mirror_tile_horizontally(self) -> None:
         self.grid.mirror_horizontally()

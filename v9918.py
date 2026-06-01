@@ -58,6 +58,12 @@ class Row8x8:
         '''mirror pattern inplace'''
         self.pattern = mirror(self.pattern)
 
+    def shift_left(self) -> None:
+        self.pattern = ((self.pattern << 1) | (self.pattern >> 7)) & 0xFF
+
+    def shift_right(self) -> None:
+        self.pattern = ((self.pattern >> 1) | (self.pattern << 7)) & 0xFF
+
 
 class Tile8x8:
     def __init__(self):
@@ -87,4 +93,26 @@ class Tile8x8:
         tmp: List[Row8x8] = [Row8x8() for _ in range(TILE_SIZE)]
         for y in range(TILE_SIZE):
             tmp[TILE_SIZE - y - 1] = self.patterns[y]
+        self.patterns = tmp
+
+    def shift_left(self) -> None:
+        '''shift horizontally inplace'''
+        for y in range(TILE_SIZE):
+            self.patterns[y].shift_left()
+
+    def shift_right(self) -> None:
+        '''shift horizontally inplace'''
+        for y in range(TILE_SIZE):
+            self.patterns[y].shift_right()
+
+    def shift_up(self) -> None:
+        tmp: List[Row8x8] = [Row8x8() for _ in range(TILE_SIZE)]
+        for y in range(TILE_SIZE):
+            tmp[(y - 1) % TILE_SIZE] = self.patterns[y]
+        self.patterns = tmp
+
+    def shift_down(self) -> None:
+        tmp: List[Row8x8] = [Row8x8() for _ in range(TILE_SIZE)]
+        for y in range(TILE_SIZE):
+            tmp[(y + 1) % TILE_SIZE] = self.patterns[y]
         self.patterns = tmp
