@@ -54,23 +54,21 @@ def get_text_color(bg_color: str) -> str:
     return 'black' if luma > 0.5 else 'white'
 
 
-class EraserProxy:
-    visible = not TOGGLE_MODE
-
-
 class TileEditor:
     def __init__(self, parent):
         self.parent = parent
+
+        # data has changed and need saving?
         self.dirty = False
 
+        # book keeping
         self.current_fg_color = FIRST_FG_COLOR
         self.current_bg_color = FIRST_BG_COLOR
-
         self.last_fg_button = None
         self.last_bg_button = None
         self.last_tool_button = None
 
-        self.eraser = EraserProxy()
+        # settings
         self.confirm_erasing = True
 
         # UI elements to remember
@@ -88,8 +86,6 @@ class TileEditor:
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
                         with ui.column():
-                            ui.switch(menu_item('Toggle smart paintbrush mode'), value=not self.eraser.visible,
-                                      on_change=lambda e: self.toggle_eraser_tool(e))
                             ui.switch(menu_item('Confirm before erasing'), value=self.confirm_erasing,
                                       on_change=lambda e: self.toggle_confirm_erasing(e))
                 ui.label(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor').classes(
@@ -106,7 +102,7 @@ class TileEditor:
             ui.label('Tools').classes('text-lg font-semibold')
             with ui.row().classes('gap-2 flex-wrap max-w-[203px]'):
                 # outline default tool
-                text = 'paintbrush\nleft click: foreground color\nright click: background color'
+                text = 'paintbrush\nleft click: draw pixel\nright click: erase pixel'
                 self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip(text).props('tool=pb outline')
                 self.last_tool_button = self.paintbrush
 
@@ -136,7 +132,7 @@ class TileEditor:
 
                 ui.separator()
 
-                ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=black').tooltip('erase tile completely')
+                ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=red').tooltip('erase tile completely')
 
     def build_grid(self) -> None:
         with ui.column().classes('gap-1'):
@@ -220,11 +216,6 @@ class TileEditor:
             with ui.row().classes('gap-2'):
                 ui.button('Export Hex', on_click=self.export_hex)
                 ui.button('Export RGB', on_click=self.export_rgb)
-
-    def toggle_eraser_tool(self, e) -> None:
-        self.eraser.visible = not e.value
-        if self.last_tool_button == self.eraser:
-            self.select_tool(self.paintbrush)
 
     def toggle_confirm_erasing(self, e) -> None:
         self.confirm_erasing = e.value
