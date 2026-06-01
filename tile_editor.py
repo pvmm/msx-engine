@@ -1,21 +1,19 @@
 from nicegui import ui
 from typing import List, Tuple
 
-import colors
+from v9918 import Row8x8, Tile8x8, TILE_SIZE, FIRST_FG_COLOR, FIRST_BG_COLOR, PALETTE
+import v9918
 
-FIRST_BG_COLOR = 1
-FIRST_FG_COLOR = 15
-TILE_SIZE = 8           # 8 or 16
-PIXEL_SCALE = 24        # visual size of each pixel
-PALETTE = [
-    '#000000', '#000000', '#3eb849', '#74d07d',
-    '#5955e0', '#8076f1', '#b95e51', '#65dbef',
-    '#db6559', '#ff897d', '#ccc35e', '#ded087',
-    '#3aa241', '#b766b5', '#cccccc', '#ffffff',
-]
+# constants
+PIXEL_SCALE = 32        # visual size of each pixel
+
+# toggle mode
+DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 
 # Common settings
 toggle_mode = False
+toggle_mode_status = OFF
+
 
 async def show_message_dialog(message):
     with ui.dialog() as dialog, ui.card():
@@ -25,52 +23,21 @@ async def show_message_dialog(message):
     result = await dialog
 
 
-class Row8x8:
-    def __init__(self):
-        # toggle mode: activate an active pixel again to deactivate it
-        self.pattern = 0
-        # color encoding = (foreground color index << 4) | background color index
-        self.colors = 0
-
-    def set_fg(self, x, index):
-        # replace foreground color?
-        if index != (self.colors >> 4) & 0x0f:
-            self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
-        if toggle_mode:
-            # toggle foreground pixel
-            self.pattern ^= 1 << (7 - x)
-        else:
-            self.pattern |= 1 << (7 - x)
-
-    def unset_fg(self, x):
-        self.pattern &= ~(1 << (7 - x))
-
-    def set_bg(self, _, index):
-        # replace background color
-        self.colors = (self.colors & 0xf0) | (index & 0x0f)
-
-    def __getitem__(self, x):
-        return self.colors if self.pattern & (1 << (7 - x)) else colors.select_bg(self.colors)
+# functions
+def hex_to_rgb(hex_string: str) -> [int, int, int]:
+    hex_string = hex_string.lstrip('#')
+    if len(hex_string) != 6:
+        raise ValueError("Hex string must contain 6 hexadecimal digits")
+    r = int(hex_string[0:2], 16)
+    g = int(hex_string[2:4], 16)
+    b = int(hex_string[4:6], 16)
+    return (r, g, b)
 
 
-class Tile8x8:
-    def __init__(self):
-        self.patterns: List[Row8x8] = [Row8x8() for _ in range(TILE_SIZE)]
-
-    def __getitem__(self, index):
-        return self.patterns[index]
-
-    def __setitem__(self, index, value):
-        self.patterns[index] = value
-
-    def set_fg(self, x, y, index):
-        self.patterns[y].set_fg(x, index)
-
-    def unset_fg(self, x, y):
-        self.patterns[y].unset_fg(x)
-
-    def set_bg(self, x, y, index):
-        self.patterns[y].set_bg(x, index)
+def get_text_color(bg_color: str) -> str:
+    r, g, b = hex_to_rgb(bg_color)
+    luma = (r * 0.299 + g * 0.587 + b * 0.114) / 255
+    return 'black' if luma > 0.5 else 'white'
 
 
 class TileEditor:
@@ -84,6 +51,7 @@ class TileEditor:
         self.current_tool = 'pb'
         self.grid = Tile8x8()
         self.pixel_refs: List[List[ui.element]] = []
+        self.set_pixel_function = None
         self.build_ui()
 
     def build_ui(self) -> None:
@@ -106,7 +74,7 @@ class TileEditor:
 
                     with ui.row().classes('gap-0'):
                         for x in range(TILE_SIZE):
-                            pixel = ui.card().on(
+                            pixel = ui.card().tight().on(
                                 'mousedown', lambda e, px=x, py=y: self.click_on_canvas(e, px, py)
                             ).on(
                                 'mouseover', lambda e, px=x, py=y: self.click_on_canvas(e, px, py)
@@ -143,7 +111,7 @@ class TileEditor:
                             '''
                         ) \
                         .tooltip(color) \
-                        .props(f'{color=} text-color={colors.get_text_color(color)}') \
+                        .props(f'{color=} text-color={get_text_color(color)}') \
                         .on('click', lambda e, i=index: self.select_fg_color(e, i)) \
                         .on('contextmenu.prevent', lambda e, i=index: self.select_bg_color(e, i))
                     if sel & 1: self.last_fg_button = button
@@ -195,7 +163,7 @@ class TileEditor:
         self.last_bg_button = event.sender
 
     def set_pixel_style(self, element, combined: int) -> None:
-        fg, bg = colors.divide(combined)
+        fg, bg = v9918.divide_colors(combined)
         element.style(
             f'''
             width: {PIXEL_SCALE}px;
@@ -213,16 +181,25 @@ class TileEditor:
                 self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
     def paint(self, index: int, x: int, y: int) -> None:
-        self.grid.set_fg(x, y, index)
-        self.set_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
-        # display foreground color clash
+        global toggle_mode
+        if toggle_mode:
+            global toggle_mode_status
+            if toggle_mode_status == OFF:
+                toggle_mode_status = int(v9918.select_fg(self.grid[y][x]) == self.current_fg_color)
+                if toggle_mode_status:
+                    self.set_pixel_function = self.grid.unset_fg
+                else:
+                    self.set_pixel_function = self.grid.set_fg
+
+        self.set_pixel_function(x, y, index)
+        # update the infamous colour clash
         for x in range(0, TILE_SIZE):
             pixel = self.grid[y][x]
             self.set_pixel_style(self.pixel_refs[y][x], pixel)
 
     def paint_bg(self, index: int, x: int, y: int) -> None:
         self.grid.set_bg(x, y, index)
-        # display background color clash
+        # update background colour
         for x in range(0, TILE_SIZE):
             pixel = self.grid[y][x]
             self.set_pixel_style(self.pixel_refs[y][x], pixel)
@@ -240,11 +217,13 @@ class TileEditor:
     async def click_on_canvas(self, event, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
-        if buttons == 0: return
+        if buttons == 0:
+            global toggle_mode_status
+            toggle_mode_status = OFF
+            return
         tool = self.last_tool_button._props.get('tool')
         if tool == 'pb':
-            self.drag_paint(buttons, x, y)
-            return
+            return self.drag_paint(buttons, x, y)
         if tool == 'er':
             self.erase(buttons, x, y)
             return
@@ -275,7 +254,7 @@ class TileEditor:
             rgb_row = []
 
             for index in row:
-                rgb_row.append(str(colors.hex_to_rgb(PALETTE[index])))
+                rgb_row.append(str(hex_to_rgb(PALETTE[index])))
 
             lines.append(', '.join(rgb_row))
 
