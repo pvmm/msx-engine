@@ -39,15 +39,17 @@ class Row8x8:
         # color encoding = (foreground color index << 4) | background color index
         self.colors = combine_colors(fg, bg)
 
-    def set_fg(self, x, index):
-        self.pattern |= 1 << (7 - x)
+    def set_fg(self, index: int) -> None:
         # replace foreground color (the infamous color clash)
         self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
 
-    def unset_fg(self, x):
+    def set_pattern(self, x: int) -> None:
+        self.pattern |= 1 << (7 - x)
+
+    def unset_pattern(self, x: int) -> None:
         self.pattern &= ~(1 << (7 - x))
 
-    def set_bg(self, _, index):
+    def set_bg(self, index: int) -> None:
         # replace background color
         self.colors = (self.colors & 0xf0) | (index & 0x0f)
 
@@ -81,14 +83,17 @@ class Tile8x8:
     def __setitem__(self, index: int, value: Row8x8) -> None:
         self.patterns[index] = value
 
-    def set_fg(self, x: int, y: int, index: int) -> None:
-        self.patterns[y].set_fg(x, index)
+    def set_pattern(self, x: int, y: int) -> None:
+        self.patterns[y].set_pattern(x)
 
-    def unset_fg(self, x, y, index = 0) -> None:
-        self.patterns[y].unset_fg(x)
+    def unset_pattern(self, x, y) -> None:
+        self.patterns[y].unset_pattern(x)
 
-    def set_bg(self, x: int, y: int, index: int) -> None:
-        self.patterns[y].set_bg(x, index)
+    def set_fg(self, y: int, index: int) -> None:
+        self.patterns[y].set_fg(index)
+
+    def set_bg(self, y: int, index: int) -> None:
+        self.patterns[y].set_bg(index)
 
     def get_fg(self, y: int) -> int:
         return self.patterns[y].get_fg()
