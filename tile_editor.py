@@ -92,8 +92,46 @@ class TileEditor:
                 )
 
             with ui.row().classes('items-start gap-8'):
+                self.build_tools()
                 self.build_canvas()
                 self.build_sidebar()
+
+    def build_tools(self) -> None:
+        with ui.column().classes('gap-1'):
+            ui.label('Tools').classes('text-lg font-semibold')
+            with ui.row().classes('gap-2 flex-wrap max-w-[203px]'):
+                # outline default tool
+                text = 'paintbrush\nleft click: foreground color\nright click: background color'
+                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip(text).props('tool=pb outline')
+                self.last_tool_button = self.paintbrush
+
+                self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
+                self.eraser.visible = not TOGGLE_MODE
+
+                text = 'inverter\nswitch foreground and background color and invert pattern in a single line (non destructable)'
+                ui.button(icon='fa-solid fa-plus-minus').tooltip(text)
+
+                text = 'shift tile left'
+                ui.button(icon='fa-solid fa-arrow-left').props('color=black').tooltip(text)
+
+                text = 'shift tile right'
+                ui.button(icon='fa-solid fa-arrow-right').props('color=black').tooltip(text)
+
+                text = 'shift tile up'
+                ui.button(icon='fa-solid fa-arrow-up').props('color=black').tooltip(text)
+
+                text = 'shift tile down'
+                ui.button(icon='fa-solid fa-arrow-down').props('color=black').tooltip(text)
+
+                text = 'mirror horizontally (non destructable)'
+                ui.button(icon='fa-solid fa-arrows-left-right', on_click=self.mirror_tile_horizontally).props('color=black').tooltip(text)
+
+                text = 'mirror vertically (non destructable)'
+                ui.button(icon='fa-solid fa-arrows-up-down', on_click=self.mirror_tile_vertically).props('color=black').tooltip(text)
+
+                ui.separator()
+
+                ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=black').tooltip('erase tile completely')
 
     def build_canvas(self) -> None:
         with ui.column().classes('gap-1'):
@@ -147,23 +185,6 @@ class TileEditor:
                         .on('contextmenu.prevent', lambda e, i=index: self.select_bg_color(e, i))
                     if sel & 1: self.last_fg_button = button
                     if sel & 2: self.last_bg_button = button
-
-            ui.separator()
-
-            with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
-                # outline default tool
-                text = 'paintbrush\nleft click: foreground color\nright click: background color'
-                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip(text).props('tool=pb outline')
-                self.last_tool_button = self.paintbrush
-                self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
-                self.eraser.visible = not TOGGLE_MODE
-                text = 'inverter\nswitch foreground and background color and invert pattern (non destructable)'
-                ui.button(icon='fa-solid fa-plus-minus').tooltip(text)
-                text = 'mirror horizontally (non destructable)'
-                ui.button(icon='fa-solid fa-arrows-left-right', on_click=self.mirror_tile_horizontally).props('color=black').tooltip(text)
-                text = 'mirror vertically (non destructable)'
-                ui.button(icon='fa-solid fa-arrows-up-down', on_click=self.mirror_tile_vertically).props('color=black').tooltip(text)
-                ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=black').tooltip('erase tile completely')
 
             ui.separator()
 
