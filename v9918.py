@@ -1,8 +1,8 @@
 # V9918 tile mode
 
 # constants
-FIRST_BG_COLOR = 1
-FIRST_FG_COLOR = 15
+FIRST_FG_COLOR = 15     # white
+FIRST_BG_COLOR = 1      # black
 TILE_SIZE = 8           # 8 or 16
 PALETTE = [
     '#000000', '#000000', '#3eb849', '#74d07d',
@@ -33,11 +33,11 @@ def mirror(pattern: int) -> int:
 
 # classes
 class Row8x8:
-    def __init__(self):
+    def __init__(self, fg: int = 0, bg: int = 0):
         # toggle mode: activate an active pixel again to deactivate it
         self.pattern = 0
         # color encoding = (foreground color index << 4) | background color index
-        self.colors = 0
+        self.colors = combine_colors(fg, bg)
 
     def set_fg(self, x, index):
         self.pattern |= 1 << (7 - x)
@@ -50,6 +50,12 @@ class Row8x8:
     def set_bg(self, _, index):
         # replace background color
         self.colors = (self.colors & 0xf0) | (index & 0x0f)
+
+    def get_fg(self):
+        return select_fg(self.colors)
+
+    def get_bg(self):
+        return select_bg(self.colors)
 
     def __getitem__(self, x):
         return self.colors if self.pattern & (1 << (7 - x)) else select_bg(self.colors)
@@ -66,8 +72,8 @@ class Row8x8:
 
 
 class Tile8x8:
-    def __init__(self):
-        self.patterns: List[Row8x8] = [Row8x8() for _ in range(TILE_SIZE)]
+    def __init__(self, fg: int = 0, bg: int = 0):
+        self.patterns: List[Row8x8] = [Row8x8(fg, bg) for _ in range(TILE_SIZE)]
 
     def __getitem__(self, index: int) -> Row8x8:
         return self.patterns[index]
@@ -83,6 +89,12 @@ class Tile8x8:
 
     def set_bg(self, x: int, y: int, index: int) -> None:
         self.patterns[y].set_bg(x, index)
+
+    def get_fg(self, y: int) -> int:
+        return self.patterns[y].get_fg()
+
+    def get_bg(self, y: int) -> int:
+        return self.patterns[y].get_bg()
 
     def mirror_horizontally(self) -> None:
         '''mirror horizontally inplace'''

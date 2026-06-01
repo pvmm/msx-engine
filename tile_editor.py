@@ -72,7 +72,7 @@ class TileEditor:
         self.eraser = EraserProxy()
         self.confirm_erasing = True
 
-        self.grid = Tile8x8()
+        self.grid = Tile8x8(self.current_fg_color, self.current_bg_color)
         self.pixel_refs: List[List[ui.element]] = []
         self.set_pixel_function = self.grid.set_fg
         self.build_ui()
@@ -135,26 +135,43 @@ class TileEditor:
 
     def build_canvas(self) -> None:
         with ui.column().classes('gap-1'):
-            ui.label('Canvas').classes('text-lg font-semibold')
+            with ui.row().classes('gap-1'):
 
-            with ui.column().classes('gap-0'):
-                for y in range(TILE_SIZE):
-                    row_refs = []
+                with ui.column().classes('gap-0'):
+                    ui.label('Grid').classes('text-lg font-semibold')
+                    for y in range(TILE_SIZE):
+                        row_refs = []
 
-                    with ui.row().classes('gap-0'):
-                        for x in range(TILE_SIZE):
-                            pixel = ui.card().tight().on(
-                                'mousedown', lambda e, px=x, py=y: self.click_on_canvas(e, px, py)
+                        with ui.row().classes('gap-0'):
+                            for x in range(TILE_SIZE):
+                                pixel = ui.card().tight().on(
+                                    'mousedown', lambda e, px=x, py=y: self.click_on_grid(e, px, py)
+                                ).on(
+                                    'mouseover', lambda e, px=x, py=y: self.click_on_grid(e, px, py)
+                                ).on(
+                                    'contextmenu.prevent', lambda: None
+                                )
+
+                                self.set_pixel_style(pixel, self.grid[y][x])
+                                row_refs.append(pixel)
+
+                        self.pixel_refs.append(row_refs)
+
+                with ui.column().classes('gap-0'):
+                    ui.label('F / B').tooltip('Foreground color / background color').style('width: 100%; text-align: center').classes('center text-lg font-semibold')
+                    for y in range(TILE_SIZE):
+                        with ui.row().classes('gap-0'):
+                            fg = ui.card().tight().on(
+                                'mousedown', lambda e, px=x, py=y: self.click_on_colors(e, px, py)
                             ).on(
-                                'mouseover', lambda e, px=x, py=y: self.click_on_canvas(e, px, py)
+                                'mouseover', lambda e, px=x, py=y: self.click_on_colors(e, px, py)
                             ).on(
                                 'contextmenu.prevent', lambda: None
                             )
+                            self.set_pixel_style(fg, self.grid.get_fg(y))
+                            bg = ui.card().tight()
+                            self.set_pixel_style(bg, self.grid.get_bg(y))
 
-                            self.set_pixel_style(pixel, self.grid[y][x])
-                            row_refs.append(pixel)
-
-                    self.pixel_refs.append(row_refs)
 
     def get_label(self, index):
         n = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
@@ -283,7 +300,7 @@ class TileEditor:
         elif buttons == 2:
             self.paint_bg(self.current_bg_color, x, y)
 
-    async def click_on_canvas(self, event, x: int, y:int) -> None:
+    async def click_on_grid(self, event, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
         if buttons == 0:
@@ -297,6 +314,9 @@ class TileEditor:
         if tool == 'er':
             return self.unpaint(x, y)
         await show_message_dialog('Not implemented yet.')
+
+    def click_on_colors(self, x: int, y: int) -> None:
+        ...
 
     async def clear(self) -> None:
         result = await show_confirm_dialog('Are you sure you want to delete the tile?') \
