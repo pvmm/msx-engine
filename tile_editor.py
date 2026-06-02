@@ -109,7 +109,7 @@ class TileEditor:
                 self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
                 self.eraser.visible = not TOGGLE_MODE
 
-                text = 'inverter\nswitch foreground and background color and invert pattern in a single line (non destructable)'
+                text = 'inverter\nswitch foreground and background colors and invert pattern in a single line (non destructable)'
                 ui.button(icon='fa-solid fa-plus-minus', on_click=self.toggle_tool).tooltip(text).props('tool=ir')
 
                 text = 'shift tile left'
@@ -355,6 +355,7 @@ class TileEditor:
                 for x in range(TILE_SIZE):
                     self.grid.unset_pattern(x, y)
             self.repaint()
+            self.dirty = False
 
     def shift_left(self) -> None:
         self.grid.shift_left()
