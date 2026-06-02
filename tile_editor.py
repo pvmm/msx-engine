@@ -110,7 +110,7 @@ class TileEditor:
                 self.eraser.visible = not TOGGLE_MODE
 
                 text = 'inverter\nswitch foreground and background color and invert pattern in a single line (non destructable)'
-                ui.button(icon='fa-solid fa-plus-minus').tooltip(text)
+                ui.button(icon='fa-solid fa-plus-minus', on_click=self.toggle_tool).tooltip(text).props('tool=ir')
 
                 text = 'shift tile left'
                 ui.button(icon='fa-solid fa-arrow-left', on_click=self.shift_left).props('color=black').tooltip(text)
@@ -321,6 +321,8 @@ class TileEditor:
             return self.drag_paint(buttons, x, y)
         if tool == 'er':
             return self.unpaint(x, y)
+        if tool == 'ir':
+            return self.invert_line(y)
         await show_message_dialog('Not implemented yet.')
 
     def click_on_color(self, event: int, x: int, y: int) -> None:
@@ -334,6 +336,13 @@ class TileEditor:
             if self.grid.get_bg(y) == self.current_bg_color: return
             self.grid.set_bg(y, self.current_bg_color)
         self.dirty = True
+        self.repaint()
+
+    def invert_line(self, y: int) -> None:
+        fg, bg = self.grid.get_fg(y), self.grid.get_bg(y)
+        self.grid[y].set_fg(bg)
+        self.grid[y].set_bg(fg)
+        self.grid[y].pattern = 0xff & ~self.grid[y].pattern
         self.repaint()
 
     async def clear(self) -> None:
