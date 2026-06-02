@@ -270,7 +270,7 @@ with ui.tab_panels(tabs, value='p').classes('w-full'):
                     ui.radio(rom_options, value=rom_options[0], on_change=lambda e: change_frame_rate(e)).props('inline').disable()
 
     with ui.tab_panel('t'):
-        TileEditor(ui.column(), 8)
+        TileEditor(ui.column())
 
     with ui.tab_panel('a'):
         ui.label('Infos')
