@@ -341,8 +341,10 @@ class TileEditor:
                 if self.confirm_erasing and self.dirty else 'yes'
         if result == 'yes':
             for y in range(TILE_SIZE):
+                self.grid.set_fg(y, self.current_fg_color)
+                self.grid.set_bg(y, self.current_bg_color)
                 for x in range(TILE_SIZE):
-                    self.grid.unset_fg(x, y)
+                    self.grid.unset_pattern(x, y)
             self.repaint()
 
     def shift_left(self) -> None:
