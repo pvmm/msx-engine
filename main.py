@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
 from nicegui import ui
 from tile_editor import TileEditor
+from stage_editor import StageEditor
+from common import get_text_color, menu_item
 
 tiles_changed = False
 target_options = ['MSX1', 'MSX2 or above']
@@ -174,6 +177,19 @@ def header(text):
     ui.element('div')
     return ui.label(text)
 
+def add_background_tile(event):
+    bg_color = event.sender._props.get('color')
+
+
+def draw_color_dropdown(palette):
+    with ui.dropdown_button('select color', auto_close=True):
+        for index, color in enumerate(palette[1:], start=1):
+            ui.item(f'color {index}', on_click=lambda e: add_background_tile(e)) \
+                    .style(f'''
+                        background-color: {color};
+                        color: {get_text_color(color)};
+                    ''').props(f'{color=}')
+
 
 scrolling_tiles_badge = None
 frame_rate_badge = None
@@ -189,7 +205,7 @@ ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crosso
 
 with ui.tabs() as tabs:
     ui.tab('p', label='Project', icon='rocket_launch')
-    ui.tab('t', label='Tileset', icon='apps')
+    ui.tab('s', label='Stages', icon='apps')
     ui.tab('a', label='About', icon='info')
 
 with ui.tab_panels(tabs, value='p').classes('w-full'):
@@ -269,8 +285,8 @@ with ui.tab_panels(tabs, value='p').classes('w-full'):
                 with ui.column().classes('ml-8'):
                     ui.radio(rom_options, value=rom_options[0], on_change=lambda e: change_frame_rate(e)).props('inline').disable()
 
-    with ui.tab_panel('t'):
-        TileEditor(ui.column())
+    with ui.tab_panel('s'):
+        StageEditor(ui.column())
 
     with ui.tab_panel('a'):
         ui.label('Infos')

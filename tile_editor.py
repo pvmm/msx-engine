@@ -1,6 +1,7 @@
 from nicegui import ui
 from typing import List, Tuple
 
+from common import get_text_color, menu_item
 from v9918 import Row8x8, Tile8x8, TILE_SIZE, FIRST_FG_COLOR, FIRST_BG_COLOR, PALETTE
 import v9918
 
@@ -15,11 +16,7 @@ DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 # Common settings
 toggle_mode_status = OFF
 
-
-def menu_item(text):
-    return text + '\u00A0\u00A0\u00A0\u00A0'
-
-
+# functions
 async def show_message_dialog(message):
     with ui.dialog() as dialog, ui.card():
         ui.label(message)
@@ -37,23 +34,6 @@ async def show_confirm_dialog(message):
     return await dialog
 
 
-# functions
-def hex_to_rgb(hex_string: str) -> [int, int, int]:
-    hex_string = hex_string.lstrip('#')
-    if len(hex_string) != 6:
-        raise ValueError("Hex string must contain 6 hexadecimal digits")
-    r = int(hex_string[0:2], 16)
-    g = int(hex_string[2:4], 16)
-    b = int(hex_string[4:6], 16)
-    return (r, g, b)
-
-
-def get_text_color(bg_color: str) -> str:
-    r, g, b = hex_to_rgb(bg_color)
-    luma = (r * 0.299 + g * 0.587 + b * 0.114) / 255
-    return 'black' if luma > 0.5 else 'white'
-
-
 class TileEditor:
     def __init__(self, parent):
         self.parent = parent
@@ -61,7 +41,7 @@ class TileEditor:
         # data has changed and need saving?
         self.dirty = False
 
-        # book keeping
+        # bookkeeping
         self.current_fg_color = FIRST_FG_COLOR
         self.current_bg_color = FIRST_BG_COLOR
         self.last_fg_button = None
@@ -191,7 +171,6 @@ class TileEditor:
                             f'''
                             width: 40px;
                             height: 40px;
-                            color: black;
                             background-color: {color};
                             border: 2px solid #444;
                             overflow: hidden;
