@@ -1,37 +1,79 @@
-from nicegui import ui
+from nicegui import ui, events
 from typing import List, Tuple
-from v9918 import PALETTE
+from v9918 import PALETTE, divide_colors
 
 from common import get_text_color, menu_item
 
+TILE_PIXEL_SIZE = 12
+TILE_STORAGE_HEIGHT = 50
+CONTAINER_COLOR = '#e0e0e0'
 
 class StageEditor:
-    background_tile_colors_label = None
+    background_tile_cards = None
+    add_metatile_button = None
 
     def __init__(self, parent):
         self.parent = parent
-        self.background_tiles = []
+        self.background_tiles = set()
+        self.selected_tile = None
         self.build_ui()
 
     def build_ui(self):
-        ui.label('Stage metatile collection').classes('text-lg font-semibold')
-        with ui.row().classes('items-center flex-nowrap'):
-            ui.label('Add background tile color:')
-            self.draw_color_dropdown(PALETTE)
+        with self.parent:
+            ui.label('Stage metatile collection').classes('text-lg font-semibold')
+            with ui.row().classes('items-center flex-nowrap'):
+                ui.label('Add background tile by color:')
+                self.draw_color_dropdown(PALETTE)
 
-        self.background_tile_colors_label = ui.label(menu_item('background tile colors'))
-        ui.button('Add metatile...', on_click=lambda e: ui.notify('button clicked!'))
+            self.background_tile_colors_label = ui.label('Available background tiles:')
 
-    def on_add_background_tile(self, event):
+            # background colour container
+            with ui.row().classes('items-center gap-2 px-2 w-full') \
+                    .style(f'background-color: {CONTAINER_COLOR}; height: {TILE_STORAGE_HEIGHT}px; overflow-y: auto;') \
+                    as self.background_tile_cards:
+                ui.space()
+            self.add_metatile_button = ui.button('Add metatile...',
+                 on_click=lambda e: ui.notify('button clicked!')).props('disabled')
+
+    def set_background_tile_style(self, element: ui.element, color = '#000000') -> None:
+        element.style(
+            f'''
+            width: {TILE_PIXEL_SIZE}px;
+            height: {TILE_PIXEL_SIZE}px;
+            background-color: {color};
+            border: 1px solid #444;
+            border-radius: 0;
+            cursor: pointer;
+            '''
+        )
+
+    def select_background_tile(self, e: events.GenericEventArguments):
+        if self.selected_tile:
+            self.selected_tile.style('border: 1px solid #444;')
+        e.sender.style('border: 3px solid #444;')
+        self.selected_tile = e.sender
+
+    def add_background_tile(self, index, color):
+        pos = len(self.background_tiles)
+        self.background_tiles.add(index)
+        if pos == len(self.background_tiles):
+            return
+        self.add_metatile_button._props.pop('disabled')
+        with self.background_tile_cards:
+            return self.set_background_tile_style(
+                ui.card().on('mousedown', lambda e: self.select_background_tile(e)) \
+                        .tooltip(f'color #{index} ({color})').move(target_index = pos),
+                color
+            )
+
+    def on_add_background_tile(self, event, index):
         color = event.sender._props.get('color')
-        self.background_tiles.append(color)
-        with self.background_tile_colors_label:
-            ui.fab_action('').style(f'background-color: {color}; color: {color}').props(f'{color=}')
+        self.add_background_tile(index, color)
 
     def draw_color_dropdown(self, palette):
         with ui.dropdown_button('select color', auto_close=True):
             for index, color in enumerate(palette[1:], start=1):
-                ui.item(f'color {index}', on_click=lambda e: self.on_add_background_tile(e)) \
+                ui.item(f'color {index}', on_click=lambda e, i=index: self.on_add_background_tile(e, i)) \
                     .style(f'''
                         background-color: {color};
                         color: {get_text_color(color)};
@@ -43,5 +85,7 @@ if __name__ == '__main__':
     ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
     with ui.row():
         StageEditor(ui.column())
-
-    ui.run(title='NiceGUI Stage Editor')
+    ui.run(
+        title='NiceGUI Tile Editor',
+        reload=False,
+    )
