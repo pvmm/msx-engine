@@ -382,12 +382,12 @@ class TileEditor:
         self.output.value = '\n'.join(lines)
 
 
-if __name__ == '__main__':
+if __name__ in {"__main__", "__mp_main__"}:
     ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
     ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
     with ui.row():
-        TileEditor(ui.column())
+        TileEditor(ui.column().classes('w-full'))
     ui.run(
-        title='NiceGUI Tile Editor',
-        reload=False,
+        title='NiceGUI Tile Editor'
     )
+
