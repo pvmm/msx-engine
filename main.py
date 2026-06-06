@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from nicegui import ui
+from nicegui import ui, events
 from tile_editor import TileEditor
 from stage_editor import StageEditor
 from common import get_text_color, menu_item
@@ -32,7 +32,7 @@ project_type = project_types[0]
 project_changed = True
 
 
-async def change_project_type(e):
+async def change_project_type(e: events.ValueChangeEventArguments):
     global project_changed, project_type
     if e.value != project_type and tiles_changed:
         with ui.dialog() as dialog, ui.card():
@@ -291,6 +291,6 @@ with ui.tab_panels(tabs, value='p').classes('w-full'):
     with ui.tab_panel('a'):
         ui.label('Infos')
 
-
+ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
 ui.run()
 
