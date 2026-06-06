@@ -1,4 +1,9 @@
 # functions
+from nicegui import ui
+
+def header(text):
+    ui.element('div')
+    return ui.label(text).classes('text-lg font-semibold')
 
 def hex_to_rgb(hex_string: str) -> [int, int, int]:
     hex_string = hex_string.lstrip('#')

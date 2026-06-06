@@ -2,7 +2,7 @@
 from nicegui import ui, events
 from tile_editor import TileEditor
 from stage_editor import StageEditor
-from common import get_text_color, menu_item
+from common import header, get_text_color, menu_item
 
 tiles_changed = False
 target_options = ['MSX1', 'MSX2 or above']
@@ -172,10 +172,6 @@ def set_r18(e):
 def toggle_megarom(e):
     pass
 
-
-def header(text):
-    ui.element('div')
-    return ui.label(text)
 
 def add_background_tile(event):
     bg_color = event.sender._props.get('color')
