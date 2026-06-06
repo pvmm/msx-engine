@@ -68,9 +68,11 @@ class StageEditor:
             header('Available metatiles')
 
             # metatile container
-            with ui.row().classes('items-center gap-2 px-2 w-full') \
-                    .style(f'background-color: {CONTAINER_COLOR}; height: {TILE_STORAGE_HEIGHT}px; overflow-y: auto;') \
-                    as self.metatile_cards:
+            with ui.row().classes('items-center gap-2 px-2 w-full') as self.metatile_cards:
+                self.metatile_cards.style(
+                        f'''background-color: {CONTAINER_COLOR};
+                        height: {TILE_STORAGE_HEIGHT}px;
+                        overflow-y: auto;''')
                 ui.space()
 
             header('Selected metatile')

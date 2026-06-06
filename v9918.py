@@ -73,6 +73,25 @@ class Row8x8:
         self.pattern = ((self.pattern >> 1) | (self.pattern << 7)) & 0xFF
 
 
+def grid_to_svg(grid: list[list[int]], width: int, height: int, scale: int = 20) -> str:
+    svg = [ f'''<svg xmlns="http://www.w3.org/2000/svg"
+            width="{width * scale}"
+            height="{height * scale}">''' ]
+    for y in range(height):
+        for x in range(width):
+            svg.append(
+                f'<rect '
+                f'x="{x * scale}" '
+                f'y="{y * scale}" '
+                f'width="{scale}" '
+                f'height="{scale}" '
+                f'fill="{PALETTE[grid[y][x]]}" '
+                f'stroke="#444"/>'
+            )
+    svg.append('</svg>')
+    return ''.join(svg)
+
+
 class Tile8x8:
     def __init__(self, fg: int = 0, bg: int = 0):
         self.patterns: List[Row8x8] = [Row8x8(fg, bg) for _ in range(TILE_SIZE)]
