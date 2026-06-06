@@ -1,7 +1,7 @@
 from nicegui import ui
 from typing import List, Tuple
 
-from common import get_text_color, menu_item
+from common import header, get_text_color, menu_item
 from v9918 import Row8x8, Tile8x8, TILE_SIZE, FIRST_FG_COLOR, FIRST_BG_COLOR, PALETTE
 import v9918
 
@@ -35,21 +35,19 @@ async def show_confirm_dialog(message):
 
 
 class TileEditor:
+    current_fg_color = FIRST_FG_COLOR
+    current_bg_color = FIRST_BG_COLOR
+    last_fg_button = None
+    last_bg_button = None
+    last_tool_button = None
+    last_selected_tool = None
+    # display dialog when erasing?
+    confirm_erasing = True
+    # data has changed and need saving?
+    dirty = False
+
     def __init__(self, parent):
         self.parent = parent
-
-        # data has changed and need saving?
-        self.dirty = False
-
-        # bookkeeping
-        self.current_fg_color = FIRST_FG_COLOR
-        self.current_bg_color = FIRST_BG_COLOR
-        self.last_fg_button = None
-        self.last_bg_button = None
-        self.last_tool_button = None
-
-        # settings
-        self.confirm_erasing = True
 
         # UI elements to remember
         self.grid = Tile8x8(self.current_fg_color, self.current_bg_color)
@@ -79,18 +77,22 @@ class TileEditor:
 
     def build_tools(self) -> None:
         with ui.column().classes('gap-1'):
-            ui.label('Tools').classes('text-lg font-semibold')
+            header('Tools')
+
             with ui.row().classes('gap-2 flex-wrap max-w-[203px]'):
                 # outline default tool
                 text = 'paintbrush\nleft click: draw pixel\nright click: erase pixel'
-                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush', on_click=self.toggle_tool).tooltip(text).props('tool=pb outline')
+                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush',
+                    on_click=lambda e: self.on_toggle_tool(e, 'paintbrush')).tooltip(text).props('outline')
                 self.last_tool_button = self.paintbrush
 
-                self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.toggle_tool).tooltip('eraser').props('tool=er')
+                self.eraser = ui.button(icon='fa-solid fa-eraser',
+                    on_click=lambda e: self.on_toggle_tool(e, 'eraser')).tooltip('eraser')
                 self.eraser.visible = not TOGGLE_MODE
 
                 text = 'inverter\nswitch foreground and background colors and invert pattern in a single line (non destructable)'
-                ui.button(icon='fa-solid fa-plus-minus', on_click=self.toggle_tool).tooltip(text).props('tool=ir')
+                ui.button(icon='fa-solid fa-plus-minus',
+                    on_click=lambda e: self.on_toggle_tool(e, 'inverter')).tooltip(text)
 
                 text = 'shift tile left'
                 ui.button(icon='fa-solid fa-arrow-left', on_click=self.shift_left).props('color=black').tooltip(text)
@@ -160,7 +162,7 @@ class TileEditor:
 
     def build_sidebar(self) -> None:
         with ui.column().classes('gap-4 min-w-[260px]'):
-            ui.label('Palette').classes('text-lg font-semibold')
+            header('Palette')
 
             with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
                 for index, color in enumerate(PALETTE[1:], start=1):
@@ -185,7 +187,7 @@ class TileEditor:
 
             ui.separator()
 
-            ui.label('Export').classes('text-lg font-semibold')
+            header('Export')
 
             self.output = ui.textarea(
                 label='Tile Data',
@@ -199,14 +201,15 @@ class TileEditor:
     def toggle_confirm_erasing(self, e) -> None:
         self.confirm_erasing = e.value
 
-    def select_tool(self, sender) -> None:
+    def select_tool(self, sender, tool: str) -> None:
         if self.last_tool_button:
             self.last_tool_button._props.pop('outline', None)
         sender.props('outline')
+        self.last_selected_tool = tool
         self.last_tool_button = sender
 
-    def toggle_tool(self, event) -> None:
-        self.select_tool(event.sender)
+    def on_toggle_tool(self, event, tool: str) -> None:
+        self.select_tool(event.sender, tool)
 
     def select_fg_color(self, event, index: int) -> None:
         tmp = self.current_fg_color
@@ -295,12 +298,11 @@ class TileEditor:
             toggle_mode_status = OFF
             return
         self.dirty = True
-        tool = self.last_tool_button._props.get('tool')
-        if tool == 'pb':
+        if self.last_selected_tool == 'paintbrush':
             return self.drag_paint(buttons, x, y)
-        if tool == 'er':
+        if self.last_selected_tool == 'eraser':
             return self.unpaint(x, y)
-        if tool == 'ir':
+        if self.last_selected_tool == 'inverter':
             return self.invert_line(y)
         await show_message_dialog('Not implemented yet.')
 
