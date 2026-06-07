@@ -15,19 +15,23 @@ CONTAINER_COLOR = '#e0e0e0'
 
 
 class MetatileEditor:
-    def __init__(self, parent):
+    tile_editor = None
+
+    def __init__(self, parent, metatile = None):
         self.parent = parent
+        self.metatile = metatile
         self.build_ui()
 
     def build_ui(self):
         with self.parent:
             header('Selected metatile')
             ui.checkbox('Scrollable metatile')
-        enable(self.parent, False)
+            self.tile_editor = TileEditor(ui.column())
+        enable(self.parent, self.metatile != False)
 
     def update(self, metatile):
         self.metatile = metatile
-        enable(self.parent)
+        enable(self.parent, self.metatile != False)
 
 
 class Metatile(InteractiveImage):
@@ -122,7 +126,7 @@ class StageEditor:
                         overflow-y: auto;''')
                 ui.space()
 
-            self.metatile_editor = MetatileEditor(ui.card())
+            self.metatile_editor = MetatileEditor(ui.card().classes('w-full'))
 
     def set_background_tile_style(self, element: ui.element, color = '#000000') -> None:
         return element.style(
