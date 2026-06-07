@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from nicegui import ui, events
-from tile_editor import TileEditor
-from stage_editor import StageEditor
+from tileeditor import TileEditor
+from stageeditor import StageEditor
 from common import header, get_text_color, menu_item
 
 tiles_changed = False

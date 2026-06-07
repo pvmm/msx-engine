@@ -4,6 +4,7 @@ from nicegui import ui, events
 from nicegui.elements.interactive_image import InteractiveImage
 from typing import List, Tuple
 from v9918 import PALETTE, divide_colors, Tile8x8, grid_to_svg
+from tileeditor import TileEditor
 
 from common import header, get_text_color, menu_item
 
@@ -12,12 +13,30 @@ TILE_STORAGE_HEIGHT = 50
 METATILE_STORAGE_HEIGHT = 100
 CONTAINER_COLOR = '#e0e0e0'
 
+
+class MetatileEditor:
+    def __init__(self, parent):
+        self.parent = parent
+        self.build_ui()
+
+    def build_ui(self):
+        with self.parent:
+            header('Selected metatile')
+            ui.checkbox('Scrollable metatile')
+        self.parent.props('disabled')
+
+    def update(self, metatile):
+        self.metatile = metatile
+        self.parent._props.pop('disabled')
+
+
 class Metatile(InteractiveImage):
     def __init__(self, svg_data: str):
         super().__init__()
         self.ui = self.set_source(
             'data:image/svg+xml;utf8,' + urllib.parse.quote(svg_data)
         )
+
 
 class StageEditor:
     background_tile_cards = None
@@ -28,6 +47,7 @@ class StageEditor:
     selected_tile_card = None
     selected_tile_index = None
     selected_metatile_element = None
+    metatile_editor = None
 
     def __init__(self, parent):
         self.parent = parent
@@ -39,6 +59,7 @@ class StageEditor:
             self.selected_metatile_element.style('border: 1px solid #444;')
         self.selected_metatile_element = event.sender
         self.selected_metatile_element.style('border: 3px solid #444;')
+        self.metatile_editor.update(self.selected_metatile_element)
 
     def add_metatile(self, bgcolor_index: int) -> Metatile:
         with self.metatile_container:
@@ -101,9 +122,7 @@ class StageEditor:
                         overflow-y: auto;''')
                 ui.space()
 
-            header('Selected metatile')
-
-            ui.checkbox('Scrollable metatile')
+            self.metatile_editor = MetatileEditor(ui.card())
 
     def set_background_tile_style(self, element: ui.element, color = '#000000') -> None:
         return element.style(
