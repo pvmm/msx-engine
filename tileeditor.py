@@ -46,7 +46,8 @@ class TileEditor:
     # data has changed and need saving?
     dirty = False
 
-    def __init__(self, parent):
+    def __init__(self, parent: ui.element, title: str = None):
+        self.title = title
         self.parent = parent
 
         # UI elements to remember
@@ -66,9 +67,10 @@ class TileEditor:
                         with ui.column():
                             ui.switch(menu_item('Confirm before erasing'), value=self.confirm_erasing,
                                       on_change=lambda e: self.toggle_confirm_erasing(e))
-                ui.label(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor').classes(
-                    'text-2xl font-bold'
-                )
+                if self.title:
+                    header(self.title)
+                else:
+                    header(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor')
 
             with ui.row().classes('items-start gap-8'):
                 self.build_tools()

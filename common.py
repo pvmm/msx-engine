@@ -4,7 +4,7 @@ from nicegui import ui
 def header(text: str) -> ui.element:
     'Common header format'
     ui.element('div')
-    return ui.label(text).classes('text-lg font-semibold')
+    return ui.label(text).classes('text-2xl font-semibold')
 
 def hex_to_rgb(hex_string: str) -> [int, int, int]:
     'Converts HTML #rrggbb to RGB triplet'

@@ -24,14 +24,13 @@ class MetatileEditor:
 
     def build_ui(self):
         with self.parent:
-            header('Selected metatile')
             ui.checkbox('Scrollable metatile')
-            self.tile_editor = TileEditor(ui.column())
-        enable(self.parent, self.metatile != False)
+            self.tile_editor = TileEditor(ui.column(), 'Selected metatile')
+        enable(self.parent, self.metatile != None)
 
     def update(self, metatile):
         self.metatile = metatile
-        enable(self.parent, self.metatile != False)
+        enable(self.parent, self.metatile != None)
 
 
 class Metatile(InteractiveImage):
