@@ -1,29 +1,55 @@
+import urllib.parse
+
 from nicegui import ui, events
+from nicegui.elements.interactive_image import InteractiveImage
 from typing import List, Tuple
-from v9918 import PALETTE, divide_colors
+from v9918 import PALETTE, divide_colors, Tile8x8, grid_to_svg
 
 from common import header, get_text_color, menu_item
 
 TILE_PIXEL_SIZE = 12
 TILE_STORAGE_HEIGHT = 50
+METATILE_STORAGE_HEIGHT = 100
 CONTAINER_COLOR = '#e0e0e0'
+
+class Metatile(InteractiveImage):
+    def __init__(self, svg_data: str):
+        super().__init__()
+        self.ui = self.set_source(
+            'data:image/svg+xml;utf8,' + urllib.parse.quote(svg_data)
+        )
 
 class StageEditor:
     background_tile_cards = None
-    metatile_cards = None
+    metatile_container = None
+    metatile_collection = []
     add_metatile_button = None
     erase_background_tile_button = None
     selected_tile_card = None
     selected_tile_index = None
+    selected_metatile_element = None
 
     def __init__(self, parent):
         self.parent = parent
         self.background_tiles = set()
         self.build_ui()
 
+    def on_select_metatile(self, event: GenericEventArguments) -> None:
+        if self.selected_metatile_element:
+            self.selected_metatile_element.style('border: 1px solid #444;')
+        self.selected_metatile_element = event.sender
+        self.selected_metatile_element.style('border: 3px solid #444;')
+
+    def add_metatile(self, bgcolor_index: int) -> Metatile:
+        with self.metatile_container:
+            metatile = Metatile(grid_to_svg(Tile8x8(15, bgcolor_index), 8, 8, 5)) \
+                    .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
+            self.metatile_collection.append(metatile)
+            return metatile
+
     def on_add_metatile_clicked(self, event: events.ClickEventArguments) -> None:
         # Add ui card with 3 tiles
-        print(event)
+        self.add_metatile(self.selected_tile_index)
 
     def erase_selected_tile(self) -> None:
         self.background_tiles.remove(self.selected_tile_index)
@@ -68,10 +94,10 @@ class StageEditor:
             header('Available metatiles')
 
             # metatile container
-            with ui.row().classes('items-center gap-2 px-2 w-full') as self.metatile_cards:
-                self.metatile_cards.style(
+            with ui.row().classes('items-start gap-2 px-2 pt-2 w-full') as self.metatile_container:
+                self.metatile_container.style(
                         f'''background-color: {CONTAINER_COLOR};
-                        height: {TILE_STORAGE_HEIGHT}px;
+                        height: {METATILE_STORAGE_HEIGHT}px;
                         overflow-y: auto;''')
                 ui.space()
 
