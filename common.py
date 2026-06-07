@@ -1,11 +1,13 @@
 # functions
 from nicegui import ui
 
-def header(text):
+def header(text: str) -> ui.element:
+    'Common header format'
     ui.element('div')
     return ui.label(text).classes('text-lg font-semibold')
 
 def hex_to_rgb(hex_string: str) -> [int, int, int]:
+    'Converts HTML #rrggbb to RGB triplet'
     hex_string = hex_string.lstrip('#')
     if len(hex_string) != 6:
         raise ValueError("Hex string must contain 6 hexadecimal digits")
@@ -15,11 +17,17 @@ def hex_to_rgb(hex_string: str) -> [int, int, int]:
     return (r, g, b)
 
 def get_text_color(bg_color: str) -> str:
-    'Define text color to be distinct of background color'
+    'Returns a text color that is distinct from background color'
     r, g, b = hex_to_rgb(bg_color)
     luma = (r * 0.299 + g * 0.587 + b * 0.114) / 255
-    color = 'black' if luma > 0.5 else 'white'
-    return color
+    return 'black' if luma > 0.5 else 'white'
 
-def menu_item(text):
+def menu_item(text: str) -> str:
+    'Mickeymouses weird spacing issue of the menu item'
     return text + '\u00A0\u00A0\u00A0\u00A0'
+
+def enable(element: ui.element, status: bool = True) -> None:
+    if status:
+        element._props.pop('disabled')
+    else:
+        element.props('disabled')

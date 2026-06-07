@@ -6,7 +6,7 @@ from typing import List, Tuple
 from v9918 import PALETTE, divide_colors, Tile8x8, grid_to_svg
 from tileeditor import TileEditor
 
-from common import header, get_text_color, menu_item
+from common import header, get_text_color, menu_item, enable
 
 TILE_PIXEL_SIZE = 12
 TILE_STORAGE_HEIGHT = 50
@@ -23,11 +23,11 @@ class MetatileEditor:
         with self.parent:
             header('Selected metatile')
             ui.checkbox('Scrollable metatile')
-        self.parent.props('disabled')
+        enable(self.parent, False)
 
     def update(self, metatile):
         self.metatile = metatile
-        self.parent._props.pop('disabled')
+        enable(self.parent)
 
 
 class Metatile(InteractiveImage):
@@ -160,13 +160,9 @@ class StageEditor:
                     ),
                 index)
 
-    def enable_tile_buttons(self, b: bool) -> None:
-        if b:
-            self.erase_background_tile_button._props.pop('disabled')
-            self.add_metatile_button._props.pop('disabled')
-        else:
-            self.erase_background_tile_button.props('disabled')
-            self.add_metatile_button.props('disabled')
+    def enable_tile_buttons(self, status: bool) -> None:
+        enable(self.erase_background_tile_button, status)
+        enable(self.add_metatile_button, status)
 
     def on_add_background_tile(self, event, index: int) -> None:
         color = event.sender._props.get('color')
