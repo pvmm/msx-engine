@@ -11,11 +11,11 @@ PROJECT_TYPES = {
             'icon': 'check_box_outline_blank',
             'tooltip': '''screen doesn't move''',
         },
-        'automatic R2L scrolling' : {
+        'automatic L2R scrolling' : {
             'icon': 'trending_flat',
-            'tooltip': '''screen always moves R2L,\nlike a SHMUP game''',
+            'tooltip': '''screen always moves L2R,\nlike a SHMUP game''',
         },
-        'scroll R2L when player moves': {
+        'scroll L2R when player moves': {
             'icon': 'start',
             'tooltip': '''screen scrolls when player moves towards the\nright edge of the screen, like a beat'em up''',
         },
