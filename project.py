@@ -1,8 +1,8 @@
 from nicegui import ui, events
 from tileeditor import TileEditor
-from stageeditor import StageEditor
-from common import header, get_text_color, menu_item
-from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
+from common import header, get_text_color, menu_item, enable
+from v9918 import PALETTE
+from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
 
 
 # constants
@@ -30,6 +30,7 @@ class Project:
     project_type = PROJECT_TYPES[0]
     project_changed = True
     tiles_changed = False
+    selected_tile_index = None
 
     # ui elements
     scrolling_tiles_badge = None
@@ -41,6 +42,7 @@ class Project:
     r18_checkbox = None
     scroll_pixels_radio = None
     tiles = None
+    selected_tile = None
 
     def __init__(self, parent):
         self.parent = parent
@@ -175,18 +177,74 @@ class Project:
         pass
 
 
-    def add_background_tile(self, event) -> None:
-        self.bg_color = event.sender._props.get('color')
+    def set_tile_style(self, element: ui.element, color = '#000000') -> None:
+        return element.style(
+            f'''
+            width: {TILE_PIXEL_SIZE}px;
+            height: {TILE_PIXEL_SIZE}px;
+            background-color: {color};
+            border: 1px solid #444;
+            border-radius: 0;
+            cursor: pointer;
+            '''
+        )
+
+
+    def enable_tile_buttons(self, status: bool) -> None:
+        enable(self.edit_tile_button, status)
+        enable(self.erase_tile_button, status)
+
+
+    def select_tile(self, element: ui.element, index: int) -> ui.element:
+        if self.selected_tile:
+            self.selected_tile.style('border: 1px solid #444;')
+        self.selected_tile = element.style('border: 3px solid #444;')
+        self.enable_tile_buttons(True)
+        return element
+
+
+    def on_select_tile(self, e: events.GenericEventArguments) -> None:
+        self.select_tile(e.sender)
+
+
+    def add_tile(self, index: int) -> ui.element:
+        with self.tiles:
+            tooltip = f'color #{index} ({PALETTE[index]})'
+            return self.select_tile(
+                    self.set_tile_style(
+                        ui.card().on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip),
+                        PALETTE[index]
+                    ),
+                index)
+
+
+    def on_add_tile(self, event: events.ClickEventArguments, index: int) -> None:
+        self.add_tile(index)
 
 
     def draw_color_dropdown(self, palette) -> None:
         with ui.dropdown_button('select color', auto_close=True):
-            for index, color in enumerate(self.palette[1:], start=1):
-                ui.item(f'color {index}', on_click=lambda e: add_background_tile(e)) \
+            for index, color in enumerate(palette[1:], start=1):
+                ui.item(f'color {index}', on_click=lambda e, i=index: self.on_add_tile(e, i)) \
                         .style(f'''
                             background-color: {color};
                             color: {get_text_color(color)};
                         ''').props(f'{color=}')
+
+
+    def on_edit_tile_clicked(self, event: events.ClickEventArguments, index: int) -> None:
+        pass
+
+
+    def erase_tile(self, element: ui.element) -> None:
+        if self.selected_tile:
+            self.tiles.remove(element)
+            self.selected_tile = None
+        self.enable_tile_buttons(False)
+
+
+    def on_erase_tile(self, event: events.ClickEventArguments) -> None:
+        self.erase_tile(self.selected_tile)
 
 
     def build_ui(self) -> None:
@@ -264,14 +322,30 @@ class Project:
                                 on_change=lambda e: self.set_scroll_in_pixels(e)).props('inline').disable()
 
                 header('Static tiles')
-                # background colour container
-                with ui.row().classes('items-center gap-2 px-2 w-full') as self.tiles:
-                    self.tiles.style(
-                        f'''background-color: {CONTAINER_COLOR};
-                            height: {TILE_STORAGE_HEIGHT}px;
-                            overflow-y: auto;'''
-                    )
-                    ui.space()
+
+                with ui.row().classes('items-center flex-nowrap'):
+                    ui.label('Add background tile by color').classes('whitespace-nowrap')
+                    self.draw_color_dropdown(PALETTE)
+
+                with ui.row().classes('items-center flex-nowrap'):
+                    text = 'Edit selected tile'
+                    self.edit_tile_button = \
+                            ui.button(icon='fa-solid fa-edit',
+                            on_click=lambda e: self.on_edit_tile_clicked(e)).tooltip(text).props('disabled')
+
+                    text = 'Erase selected tile'
+                    self.erase_tile_button = \
+                            ui.button(icon='fa-solid fa-minus',
+                            on_click=self.on_erase_tile).tooltip(text).props('disabled')
+
+                    # background colour container
+                    with ui.row().classes('items-center gap-2 px-2 min-w-[800px]') as self.tiles:
+                        self.tiles.style(
+                            f'''background-color: {CONTAINER_COLOR};
+                                height: {TILE_STORAGE_HEIGHT}px;
+                                overflow-y: auto;'''
+                        )
+                        ...
 
 
 """
