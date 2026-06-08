@@ -6,10 +6,10 @@ from typing import List, Tuple
 from v9918 import PALETTE, divide_colors, Tile8x8, grid_to_svg
 from tileeditor import TileEditor
 
+from constants import TILE_STORAGE_HEIGHT
 from common import header, get_text_color, menu_item, enable
 
 TILE_PIXEL_SIZE = 12
-TILE_STORAGE_HEIGHT = 50
 METATILE_STORAGE_HEIGHT = 100
 CONTAINER_COLOR = '#e0e0e0'
 

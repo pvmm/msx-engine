@@ -2,6 +2,7 @@ from nicegui import ui, events
 from tileeditor import TileEditor
 from stageeditor import StageEditor
 from common import header, get_text_color, menu_item
+from constants import TILE_STORAGE_HEIGHT
 
 
 # constants
