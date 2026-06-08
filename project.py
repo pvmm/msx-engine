@@ -6,7 +6,24 @@ from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
 
 
 # constants
-PROJECT_TYPES = ['static screen', 'automatic R2L scrolling', 'free side scrolling']
+PROJECT_TYPES = {
+        'static screen': {
+            'icon': 'check_box_outline_blank',
+            'tooltip': '''screen doesn't move''',
+        },
+        'automatic R2L scrolling' : {
+            'icon': 'trending_flat',
+            'tooltip': '''screen always moves R2L,\nlike a SHMUP game''',
+        },
+        'scroll R2L when player moves': {
+            'icon': 'start',
+            'tooltip': '''screen scrolls when player moves towards the\nright edge of the screen, like a beat'em up''',
+        },
+        'free side scrolling': {
+            'icon': 'swap_horiz',
+            'tooltip': '''screen scrolls left or right when player moves towards the\nleft or right edge of the screen, like Atari 2600 Defender''',
+        }
+}
 TARGET_OPTIONS = ['MSX1', 'MSX2 or above']
 FRAME_RATE_OPTIONS = ['60Hz', '50Hz']
 ROM_OPTIONS = ['8K', '16K']
@@ -27,7 +44,7 @@ class Project:
     _105_color_mode = False
     fps = FPS_OPTIONS.index('frame rate')
     scroll_pixels = 8
-    project_type = PROJECT_TYPES[0]
+    project_type = list(PROJECT_TYPES.keys())[0]
     project_changed = True
     tiles_changed = False
     selected_tile_index = None
@@ -71,8 +88,7 @@ class Project:
             e.sender.set_value(self.project_type)
 
 
-    def reserve_second_pattern_table(self, e) -> None:
-        print('e',e)
+    def reserve_second_pattern_table(self, e: events.ValueChangeEventArguments) -> None:
         if e.value:
             self.available_tiles *= 2
         else:
@@ -249,13 +265,11 @@ class Project:
 
     def build_ui(self) -> None:
         with self.parent:
-            toggle = ui.toggle({x:'' for x in PROJECT_TYPES}, value=self.project_type, on_change=lambda e: self.change_project_type(e))
-            with ui.teleport(f'#{toggle.html_id} > button:nth-child(1) .q-btn__content'):
-                ui.icon('check_box_outline_blank', size='xl')
-            with ui.teleport(f'#{toggle.html_id} > button:nth-child(2) .q-btn__content'):
-                ui.icon('trending_flat', size='xl')
-            with ui.teleport(f'#{toggle.html_id} > button:nth-child(3) .q-btn__content'):
-                ui.icon('swap_horiz', size='xl')
+            toggle = ui.toggle({x:'' for x in PROJECT_TYPES.keys()}, value=self.project_type,
+                    on_change=self.change_project_type)
+            for i, key in enumerate(PROJECT_TYPES.keys(), start=1):
+                with ui.teleport(f'#{toggle.html_id} > button:nth-child({i}) .q-btn__content'):
+                    ui.icon(PROJECT_TYPES[key]['icon'], size='xl').tooltip(PROJECT_TYPES[key]['tooltip'])
             with ui.row().classes('items-center gap-2 flex-nowrap'):
                 ui.label('Project type: ')
                 ui.label().bind_text_from(toggle, 'value')
@@ -305,7 +319,7 @@ class Project:
                     header('MSX2 features')
                     with ui.column().classes('ml-8'):
                         ui.checkbox('Allow palette change', on_change=lambda e: self.allow_palette_change(e))
-                        r18_checkbox = ui.checkbox('R#18 hardware scroll', on_change=lambda e: self.set_r18(e)).disable()
+                        self.r18_checkbox = ui.checkbox('R#18 hardware scroll', on_change=lambda e: self.set_r18(e)).disable()
                         with ui.column().classes('ml-8'):
                             with ui.row().classes('items-center flex-nowrap'):
                                 ui.icon('info', color='black').classes('text-xl')
