@@ -1,9 +1,10 @@
+import json
 import urllib.parse
 
 from nicegui import ui, events
 from nicegui.elements.interactive_image import InteractiveImage
 from typing import List, Tuple
-from v9918 import PALETTE, divide_colors, Tile8x8, grid_to_svg
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, divide_colors, Tile8x8, grid_to_svg
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
@@ -22,11 +23,13 @@ class MetatileEditor:
         self.metatile = metatile
         self.build_ui()
 
+
     def build_ui(self):
         with self.parent:
             ui.checkbox('Scrollable metatile')
-            self.tile_editor = TileEditor(ui.column(), 'Selected metatile')
+            self.tile_editor = TileEditor(parent=ui.column())
         enable(self.parent, self.metatile != None)
+
 
     def update(self, metatile):
         self.metatile = metatile
@@ -34,10 +37,26 @@ class MetatileEditor:
 
 
 class Metatile(InteractiveImage):
-    def __init__(self, svg_data: str):
+    def __init__(self, data = None, scale = 5):
         super().__init__()
+        self.scale = scale
+
+        if not data:
+            grid = Tile8x8(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
+        elif isinstance(data, Tile8x8):
+            grid = data
+        else:
+            # Convert from json string
+            grid = json.loads(data)
+
+        self.reload(grid)
+
+
+    def reload(self, grid):
+        self.grid = grid
+        data = grid_to_svg(self.grid, self.scale)
         self.ui = self.set_source(
-            'data:image/svg+xml;utf8,' + urllib.parse.quote(svg_data)
+            'data:image/svg+xml;utf8,' + urllib.parse.quote(data)
         )
 
 
@@ -62,11 +81,11 @@ class StageEditor:
             self.selected_metatile_element.style('border: 1px solid #444;')
         self.selected_metatile_element = event.sender
         self.selected_metatile_element.style('border: 3px solid #444;')
-        self.metatile_editor.update(self.selected_metatile_element)
+        #self.metatile_editor.update(self.selected_metatile_element)
 
     def add_metatile(self, bgcolor_index: int) -> Metatile:
         with self.metatile_container:
-            metatile = Metatile(grid_to_svg(Tile8x8(15, bgcolor_index), 8, 8, 5)) \
+            metatile = Metatile(grid_to_svg(Tile8x8(15, bgcolor_index), 5)) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
             self.metatile_collection.append(metatile)
             return metatile
@@ -144,7 +163,7 @@ class StageEditor:
             self.selected_tile_card.style('border: 1px solid #444;')
         self.selected_tile_card = element.style('border: 3px solid #444;')
         self.selected_tile_index = index
-        self.enable_tile_buttons(True)
+        self.enable_tile_buttons()
         return element
 
     def on_select_background_tile(self, e: events.GenericEventArguments, index: int) -> None:
@@ -163,7 +182,7 @@ class StageEditor:
                     ),
                 index)
 
-    def enable_tile_buttons(self, status: bool) -> None:
+    def enable_tile_buttons(self, status: bool = True) -> None:
         enable(self.erase_background_tile_button, status)
         enable(self.add_metatile_button, status)
 

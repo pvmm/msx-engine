@@ -1,7 +1,8 @@
 from nicegui import ui, events
 from tileeditor import TileEditor
+from stageeditor import Metatile
 from common import header, get_text_color, menu_item, enable
-from v9918 import PALETTE
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile8x8
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
 
 
@@ -206,36 +207,32 @@ class Project:
         )
 
 
-    def enable_tile_buttons(self, status: bool) -> None:
+    def enable_tile_buttons(self, status: bool = True) -> None:
         enable(self.edit_tile_button, status)
         enable(self.erase_tile_button, status)
 
 
-    def select_tile(self, element: ui.element, index: int) -> ui.element:
+    def select_tile(self, element: ui.element) -> None:
         if self.selected_tile:
             self.selected_tile.style('border: 1px solid #444;')
         self.selected_tile = element.style('border: 3px solid #444;')
         self.enable_tile_buttons(True)
-        return element
 
 
     def on_select_tile(self, e: events.GenericEventArguments) -> None:
         self.select_tile(e.sender)
 
 
-    def add_tile(self, index: int) -> ui.element:
+    def add_tile(self, bg_color: int) -> Metatile:
         with self.tiles:
-            tooltip = f'color #{index} ({PALETTE[index]})'
-            return self.select_tile(
-                    self.set_tile_style(
-                        ui.card().on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip),
-                        PALETTE[index]
-                    ),
-                index)
+            tooltip = f'color #{bg_color} ({PALETTE[bg_color]})'
+            return self.select_tile(Metatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
+                    .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
 
 
     def on_add_tile(self, event: events.ClickEventArguments, index: int) -> None:
         self.add_tile(index)
+        self.enable_tile_buttons()
 
 
     def draw_color_dropdown(self, palette) -> None:
@@ -248,8 +245,16 @@ class Project:
                         ''').props(f'{color=}')
 
 
-    def on_edit_tile_clicked(self, event: events.ClickEventArguments, index: int) -> None:
-        pass
+    async def on_edit_tile_clicked(self, e: events.ClickEventArguments) -> None:
+        with ui.dialog() as dialog, ui.card().style('max-width: none;') as parent:
+            editor = TileEditor(parent, Tile8x8().copy(self.selected_tile.grid))
+            with ui.row():
+                ui.button('OK', on_click=lambda: dialog.submit(True))
+                ui.button('Cancel', on_click=lambda: dialog.submit(False))
+        result = await dialog
+        if result:
+            # return tile changes
+            self.selected_tile.reload(editor.grid)
 
 
     def erase_tile(self, element: ui.element) -> None:
@@ -338,7 +343,7 @@ class Project:
                 header('Static tiles')
 
                 with ui.row().classes('items-center flex-nowrap'):
-                    ui.label('Add background tile by color').classes('whitespace-nowrap')
+                    ui.label('Create tile by background color').classes('whitespace-nowrap')
                     self.draw_color_dropdown(PALETTE)
 
                 with ui.row().classes('items-center flex-nowrap'):

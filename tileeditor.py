@@ -1,8 +1,10 @@
+import json
+
 from nicegui import ui
 from typing import List, Tuple
 
 from common import header, get_text_color, menu_item
-from v9918 import Row8x8, Tile8x8, TILE_SIZE, FIRST_FG_COLOR, FIRST_BG_COLOR, PALETTE
+from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE
 import v9918
 
 # constants
@@ -34,9 +36,9 @@ async def show_confirm_dialog(message):
     return await dialog
 
 
-class TileEditor:
-    current_fg_color = FIRST_FG_COLOR
-    current_bg_color = FIRST_BG_COLOR
+class TileEditor(ui.element):
+    current_fg_color = DEFAULT_FG_COLOR
+    current_bg_color = DEFAULT_BG_COLOR
     last_fg_button = None
     last_bg_button = None
     last_tool_button = None
@@ -45,18 +47,36 @@ class TileEditor:
     # data has changed and need saving?
     dirty = False
 
-    def __init__(self, parent: ui.element, title: str = None):
-        self.title = title
+    def __init__(self, parent: ui.element, grid: List[List[int]] = None, fg: int = None, bg: int = None, **kwargs):
+        super().__init__('div', **kwargs) 
         self.parent = parent
 
+        # selected colours from palette
+        if fg:
+            self.current_fg_color = fg
+        if bg:
+            self.current_bg_color = bg
+
         # UI elements to remember
-        self.grid = Tile8x8(self.current_fg_color, self.current_bg_color)
+        if not grid:
+            self.grid = Tile8x8(self.current_fg_color, self.current_bg_color)
+        elif isinstance(grid, Tile8x8):
+            self.grid = grid
+        else:
+            self.grid = json.load(grid)
+
+        # define editor title
+        width = len(self.grid[0])
+        height = len(self.grid)
+        self.title = f'{width}x{height} Tile'
+
         self.set_pixel_function = self.grid.set_pattern
         self.pixel_refs: List[List[ui.element]] = []
         self.bg_color_refs: List[List[ui.element]] = []
         self.fg_color_refs: List[List[ui.element]] = []
 
         self.build_ui()
+
 
     def build_ui(self) -> None:
         with self.parent:
@@ -75,6 +95,7 @@ class TileEditor:
                 self.build_tools()
                 self.build_grid()
                 self.build_sidebar()
+
 
     def build_tools(self) -> None:
         with ui.column().classes('gap-1'):
@@ -117,6 +138,7 @@ class TileEditor:
 
                 ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=red').tooltip('erase tile completely')
 
+
     def build_grid(self) -> None:
         with ui.column().classes('gap-1'):
             with ui.row().classes('gap-1'):
@@ -142,7 +164,8 @@ class TileEditor:
                         self.pixel_refs.append(row_refs)
 
                 with ui.column().classes('gap-0'):
-                    ui.label('B[F]').tooltip('outside: background color\ninside: foreground color').style('width: 100%; text-align: center').classes('center text-lg font-semibold')
+                    ui.label('B[F]').tooltip('outside: background color\ninside: foreground color') \
+                            .style('width: 100%; text-align: center').classes('center text-lg font-semibold')
                     for y in range(TILE_SIZE):
                         with ui.row().classes('gap-0'):
                             with ui.card().tight().style('display: flex; justify-content: center; align-items: center;') as bg:
@@ -157,9 +180,11 @@ class TileEditor:
 
                             self.set_grid_pixel_style(bg, self.grid.get_bg(y))
 
+
     def get_label(self, index):
         n = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
         return ['', 'F', 'B', 'FB'][n]
+
 
     def build_sidebar(self) -> None:
         with ui.column().classes('gap-4 min-w-[260px]'):
@@ -199,8 +224,10 @@ class TileEditor:
                 ui.button('Export Hex', on_click=self.export_hex)
                 ui.button('Export RGB', on_click=self.export_rgb)
 
+
     def toggle_confirm_erasing(self, e) -> None:
         self.confirm_erasing = e.value
+
 
     def select_tool(self, sender, tool: str) -> None:
         if self.last_tool_button:
@@ -208,8 +235,10 @@ class TileEditor:
         sender.props('outline')
         self.last_tool_button = sender
 
+
     def on_toggle_tool(self, event, tool: str) -> None:
         self.select_tool(event.sender, tool)
+
 
     def select_fg_color(self, event, index: int) -> None:
         tmp = self.current_fg_color
@@ -219,6 +248,7 @@ class TileEditor:
         event.sender.set_text(self.get_label(index))
         self.last_fg_button = event.sender
 
+
     def select_bg_color(self, event, index: int) -> None:
         tmp = self.current_bg_color
         self.current_bg_color = index
@@ -226,6 +256,7 @@ class TileEditor:
             self.last_bg_button.set_text(self.get_label(tmp))
         event.sender.set_text(self.get_label(index))
         self.last_bg_button = event.sender
+
 
     def set_grid_fg_style(self, element, fg: int) -> None:
         element.style(
@@ -238,6 +269,7 @@ class TileEditor:
             cursor: pointer;
             '''
         )
+
 
     def set_grid_pixel_style(self, element, combined: int) -> None:
         fg, bg = v9918.divide_colors(combined)
@@ -252,6 +284,7 @@ class TileEditor:
             '''
         )
 
+
     def repaint(self) -> None:
         for y in range(0, TILE_SIZE):
             for x in range(0, TILE_SIZE):
@@ -260,9 +293,11 @@ class TileEditor:
             self.set_grid_fg_style(self.fg_color_refs[y], self.grid.get_fg(y))
             self.set_grid_pixel_style(self.bg_color_refs[y], self.grid.get_bg(y))
 
+
     def unpaint(self, x: int, y: int) -> None:
         self.grid.unset_pattern(x, y)
         self.set_grid_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
+
 
     def paint(self, x: int, y: int) -> None:
         if not self.eraser.visible:
@@ -277,6 +312,7 @@ class TileEditor:
         self.set_pixel_function(x, y)
         self.set_grid_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
+
     def paint_bg(self, index: int, x: int, y: int) -> None:
         self.grid.set_bg(y, index)
         # update background colour
@@ -284,11 +320,13 @@ class TileEditor:
             pixel = self.grid[y][x]
             self.set_grid_pixel_style(self.pixel_refs[y][x], pixel)
 
+
     def drag_paint(self, buttons: int, x: int, y: int) -> None:
         if buttons == 1:
             self.paint(x, y)
         elif buttons == 2:
             self.unpaint(x, y)
+
 
     async def click_on_grid(self, event, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
@@ -306,6 +344,7 @@ class TileEditor:
             return self.invert_line(y)
         await show_message_dialog('Not implemented yet.')
 
+
     def click_on_color(self, event: int, x: int, y: int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
@@ -319,12 +358,14 @@ class TileEditor:
         self.dirty = True
         self.repaint()
 
+
     def invert_line(self, y: int) -> None:
         fg, bg = self.grid.get_fg(y), self.grid.get_bg(y)
         self.grid[y].set_fg(bg)
         self.grid[y].set_bg(fg)
         self.grid[y].pattern = 0xff & ~self.grid[y].pattern
         self.repaint()
+
 
     async def clear(self) -> None:
         result = await show_confirm_dialog('Are you sure you want to delete the tile?') \
@@ -338,29 +379,36 @@ class TileEditor:
             self.repaint()
             self.dirty = False
 
+
     def shift_left(self) -> None:
         self.grid.shift_left()
         self.repaint()
+
 
     def shift_right(self) -> None:
         self.grid.shift_right()
         self.repaint()
 
+
     def shift_up(self) -> None:
         self.grid.shift_up()
         self.repaint()
+
 
     def shift_down(self) -> None:
         self.grid.shift_down()
         self.repaint()
 
+
     def mirror_tile_horizontally(self) -> None:
         self.grid.mirror_horizontally()
         self.repaint()
 
+
     def mirror_tile_vertically(self) -> None:
         self.grid.mirror_vertically()
         self.repaint()
+
 
     def export_hex(self) -> None:
         lines = []
@@ -369,6 +417,7 @@ class TileEditor:
             lines.append(', '.join(row))
 
         self.output.value = '\n'.join(lines)
+
 
     def export_rgb(self) -> None:
         lines = []
@@ -385,7 +434,7 @@ class TileEditor:
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    from common import run
     with ui.row():
-        TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'))
+        TileEditor(parent=ui.column().classes('w-full min-h-screen p-0 m-0'))
+    from common import run
     run()
