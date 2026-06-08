@@ -2,7 +2,7 @@ from nicegui import ui, events
 from tileeditor import TileEditor
 from stageeditor import StageEditor
 from common import header, get_text_color, menu_item
-from constants import TILE_STORAGE_HEIGHT
+from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
 
 
 # constants
@@ -40,6 +40,7 @@ class Project:
     second_pattern_checkbox = None
     r18_checkbox = None
     scroll_pixels_radio = None
+    tiles = None
 
     def __init__(self, parent):
         self.parent = parent
@@ -202,7 +203,7 @@ class Project:
                 ui.label().bind_text_from(toggle, 'value')
 
             header('Summary')
-            with ui.column().classes('ml-8 gap-1'):
+            with ui.column().classes('pl-8 gap-1 w-full'):
                 with ui.row().classes('items-center flex-nowrap'):
                     ui.label('Target platform:')
                     self.target_badge = ui.badge(self.target, color='blue')
@@ -222,7 +223,7 @@ class Project:
                     self.frame_rate_badge.visible = self.force_frame_rate
 
             header('Settings')
-            with ui.column().classes('ml-8'):
+            with ui.column().classes('pl-8 w-full'):
                 header('Display engine')
                 with ui.column().classes('ml-8'):
                     self.second_pattern_checkbox = ui.checkbox('Reserve second pattern table in VRAM for next frame',
@@ -262,17 +263,28 @@ class Project:
                         self.scroll_pixels_radio = ui.radio([1, 2, 4, 8], value=8,
                                 on_change=lambda e: self.set_scroll_in_pixels(e)).props('inline').disable()
 
+                header('Static tiles')
+                # background colour container
+                with ui.row().classes('items-center gap-2 px-2 w-full') as self.tiles:
+                    self.tiles.style(
+                        f'''background-color: {CONTAINER_COLOR};
+                            height: {TILE_STORAGE_HEIGHT}px;
+                            overflow-y: auto;'''
+                    )
+                    ui.space()
+
+
+"""
                 ui.label('Memory layout')
                 with ui.column().classes('ml-8'):
                     ui.checkbox('ROM bank switching', on_change=lambda e: self.toggle_megarom(e))
                     with ui.column().classes('ml-8'):
                         ui.radio(ROM_OPTIONS, value=ROM_OPTIONS[0],
                                 on_change=lambda e: self.change_frame_rate(e)).props('inline').disable()
+                                """
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    a = 1 / 0
-    with ui.row():
-        Project(ui.column().classes('w-full'))
+    Project(ui.column().classes('w-full min-h-screen p-0 m-0'))
     from common import run
     run()

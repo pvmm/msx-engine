@@ -6,12 +6,12 @@ from typing import List, Tuple
 from v9918 import PALETTE, divide_colors, Tile8x8, grid_to_svg
 from tileeditor import TileEditor
 
-from constants import TILE_STORAGE_HEIGHT
+from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
 from common import header, get_text_color, menu_item, enable
+
 
 TILE_PIXEL_SIZE = 12
 METATILE_STORAGE_HEIGHT = 100
-CONTAINER_COLOR = '#e0e0e0'
 
 
 class MetatileEditor:
@@ -184,5 +184,5 @@ class StageEditor:
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run
     with ui.row().classes('w-full'):
-        StageEditor(ui.column())
+        StageEditor(ui.column().classes('w-full min-h-screen p-0 m-0'))
     run()

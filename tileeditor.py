@@ -389,5 +389,5 @@ class TileEditor:
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run
     with ui.row():
-        TileEditor(ui.column().classes('w-full'))
+        TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'))
     run()
