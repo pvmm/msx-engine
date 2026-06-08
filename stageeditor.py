@@ -182,10 +182,7 @@ class StageEditor:
                     .props(f'{color=}')
 
 if __name__ in {"__main__", "__mp_main__"}:
-    ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
-    ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
+    from common import run
     with ui.row().classes('w-full'):
         StageEditor(ui.column())
-    ui.run(
-        title='NiceGUI Tile Editor'
-    )
+    run()
