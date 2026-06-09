@@ -35,9 +35,9 @@ def get_text_color(bg_color: str) -> str:
     return 'black' if luma > 0.5 else 'white'
 
 
-def menu_item(text: str) -> str:
+def menu_item(element: ui.element) -> str:
     'Mickeymouses weird spacing issue of the menu item'
-    return text + '\u00A0\u00A0\u00A0\u00A0'
+    return element.classes('mx-4')
 
 
 def enable(element: ui.element, status: bool = True) -> None:

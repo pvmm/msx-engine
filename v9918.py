@@ -214,3 +214,7 @@ class Tile8x8:
             tmp[(y + 1) % TILE_SIZE] = self.patterns[y]
         self.patterns = tmp
 
+
+    def set_copy_format(self, format: str) -> None:
+        pass
+

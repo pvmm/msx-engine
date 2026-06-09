@@ -1,6 +1,6 @@
 import json
 
-from nicegui import ui
+from nicegui import ui, events
 from typing import List, Tuple
 
 from common import header, get_text_color, menu_item
@@ -10,6 +10,7 @@ import v9918
 # constants
 GRID_PIXEL_SIZE = 32        # size of each grid pixel
 GRID_FG_LAYER_SIZE = 16        # size of foreground color pixel
+COPY_TO_CLIPBOARD_FORMATS = ['index', 'rgb']
 
 # toggle mode: switches between paintbrush and eraser automatically by context
 TOGGLE_MODE = False
@@ -83,9 +84,11 @@ class TileEditor(ui.element):
             with ui.row().classes('items-center flex-nowrap'):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
-                        with ui.column():
-                            ui.switch(menu_item('Confirm before erasing'), value=self.confirm_erasing,
-                                      on_change=lambda e: self.toggle_confirm_erasing(e))
+                        with ui.column().classes('items-center'):
+                            menu_item(ui.label('Copy to clipboard as')).classes('mt-4')
+                            self.clipboard_toggle = ui.toggle(COPY_TO_CLIPBOARD_FORMATS, value='index', on_change=self.on_set_copy_format)
+                            menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
+                                      on_change=self.toggle_confirm_erasing))
                 if self.title:
                     header(self.title)
                 else:
@@ -136,6 +139,7 @@ class TileEditor(ui.element):
 
                 ui.separator()
 
+                ui.button(icon='fa-solid fa-copy', on_click=self.copy_to_clipboard).props('color=green').tooltip('copy pattern to clipboard')
                 ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=red').tooltip('erase tile completely')
 
 
@@ -378,6 +382,16 @@ class TileEditor(ui.element):
                     self.grid.unset_pattern(x, y)
             self.repaint()
             self.dirty = False
+
+
+    def on_set_copy_format(self, event: events.ValueChangeEventArguments) -> None:
+        self.grid.set_copy_format(event.value)
+
+
+    def copy_to_clipboard(self, event: events.ClickEventArguments) -> None:
+        self.grid.set_copy_style(self.bla)
+        script = f'''navigator.clipboard.writeText("{self.grid}")'''
+        ui.run_javascript(script)
 
 
     def shift_left(self) -> None:
