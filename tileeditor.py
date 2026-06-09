@@ -215,19 +215,6 @@ class TileEditor(ui.element):
                     if sel & 1: self.last_fg_button = button
                     if sel & 2: self.last_bg_button = button
 
-            ui.separator()
-
-            header('Export')
-
-            self.output = ui.textarea(
-                label='Tile Data',
-                value='',
-            ).props('readonly').classes('w-full')
-
-            with ui.row().classes('gap-2'):
-                ui.button('Export Hex', on_click=self.export_hex)
-                ui.button('Export RGB', on_click=self.export_rgb)
-
 
     def toggle_confirm_erasing(self, e) -> None:
         self.confirm_erasing = e.value
@@ -422,29 +409,6 @@ class TileEditor(ui.element):
     def mirror_tile_vertically(self) -> None:
         self.grid.mirror_vertically()
         self.repaint()
-
-
-    def export_hex(self) -> None:
-        lines = []
-
-        for row in self.grid:
-            lines.append(', '.join(row))
-
-        self.output.value = '\n'.join(lines)
-
-
-    def export_rgb(self) -> None:
-        lines = []
-
-        for row in self.grid:
-            rgb_row = []
-
-            for index in row:
-                rgb_row.append(str(hex_to_rgb(PALETTE[index])))
-
-            lines.append(', '.join(rgb_row))
-
-        self.output.value = '\n'.join(lines)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
