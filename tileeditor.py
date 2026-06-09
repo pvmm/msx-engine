@@ -48,6 +48,12 @@ class TileEditor(ui.element):
     # data has changed and need saving?
     dirty = False
 
+    # ui elements
+    patternbrush = None
+    colorbrush = None
+    eraser = None
+    inverter = None
+
     def __init__(self, parent: ui.element, grid: List[List[int]] = None, fg: int = None, bg: int = None, **kwargs):
         super().__init__('div', **kwargs) 
         self.parent = parent
@@ -106,18 +112,24 @@ class TileEditor(ui.element):
 
             with ui.row().classes('gap-2 flex-wrap max-w-[203px]'):
                 # outline default tool
-                text = 'paintbrush\nleft click: draw pixel\nright click: erase pixel'
-                self.paintbrush = ui.button(icon='fa-solid fa-paintbrush',
-                    on_click=lambda e: self.on_toggle_tool(e, 'paintbrush')).tooltip(text).props('outline')
-                self.last_tool_button = self.paintbrush
+                text = 'pattern brush\nleft click: draw pixel\nright click: erase pixel'
+                self.patternbrush = ui.button(icon='fa-solid fa-eye-dropper',
+                    on_click=self.on_toggle_tool).tooltip(text).props('outline')
+                self.last_tool_button = self.patternbrush
+
+                text = 'color brush\nleft click: draw foreground colour pixel\nright click: draw background colour line'
+                self.colorbrush = ui.button(icon='fa-solid fa-paintbrush',
+                    on_click=self.on_toggle_tool).tooltip(text)
 
                 self.eraser = ui.button(icon='fa-solid fa-eraser',
-                    on_click=lambda e: self.on_toggle_tool(e, 'eraser')).tooltip('eraser')
+                    on_click=self.on_toggle_tool).tooltip('eraser')
                 self.eraser.visible = not TOGGLE_MODE
 
                 text = 'inverter\nswitch foreground and background colors and invert pattern in a single line (non destructable)'
                 ui.button(icon='fa-solid fa-plus-minus',
-                    on_click=lambda e: self.on_toggle_tool(e, 'inverter')).tooltip(text)
+                    on_click=self.on_toggle_tool).tooltip(text)
+
+                ui.separator()
 
                 text = 'shift tile left'
                 ui.button(icon='fa-solid fa-arrow-left', on_click=self.shift_left).props('color=black').tooltip(text)
@@ -220,15 +232,15 @@ class TileEditor(ui.element):
         self.confirm_erasing = e.value
 
 
-    def select_tool(self, sender, tool: str) -> None:
+    def select_tool(self, sender: ui.element) -> None:
         if self.last_tool_button:
             self.last_tool_button._props.pop('outline', None)
         sender.props('outline')
         self.last_tool_button = sender
 
 
-    def on_toggle_tool(self, event, tool: str) -> None:
-        self.select_tool(event.sender, tool)
+    def on_toggle_tool(self, event) -> None:
+        self.select_tool(event.sender)
 
 
     def select_fg_color(self, event, index: int) -> None:
@@ -277,8 +289,8 @@ class TileEditor(ui.element):
 
 
     def repaint(self) -> None:
-        for y in range(0, TILE_SIZE):
-            for x in range(0, TILE_SIZE):
+        for y in range(TILE_SIZE):
+            for x in range(TILE_SIZE):
                 self.set_grid_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
             # repaint color column
             self.set_grid_fg_style(self.fg_color_refs[y], self.grid.get_fg(y))
@@ -291,25 +303,23 @@ class TileEditor(ui.element):
 
 
     def paint(self, x: int, y: int) -> None:
-        if not self.eraser.visible:
-            global toggle_mode_status
-            if toggle_mode_status == OFF:
-                toggle_mode_status = int(v9918.select_fg(self.grid[y][x]) == self.current_fg_color)
-                if toggle_mode_status:
-                    self.set_pixel_function = self.grid.unset_pattern
-                else:
-                    self.set_pixel_function = self.grid.set_pattern
-
-        self.set_pixel_function(x, y)
+        self.grid.set_pattern(x, y)
         self.set_grid_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
+
+
+    def paint_fg(self, index: int, x: int, y: int) -> None:
+        self.grid.set_fg(y, index)
+        self.grid.set_pattern(x, y)
+        # repaint fg color if it changed
+        for x in range(TILE_SIZE):
+            self.set_grid_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
 
     def paint_bg(self, index: int, x: int, y: int) -> None:
         self.grid.set_bg(y, index)
-        # update background colour
-        for x in range(0, TILE_SIZE):
-            pixel = self.grid[y][x]
-            self.set_grid_pixel_style(self.pixel_refs[y][x], pixel)
+        # update bg color if it changed
+        for x in range(TILE_SIZE):
+            self.set_grid_pixel_style(self.pixel_refs[y][x], self.grid[y][x])
 
 
     def drag_paint(self, buttons: int, x: int, y: int) -> None:
@@ -317,6 +327,13 @@ class TileEditor(ui.element):
             self.paint(x, y)
         elif buttons == 2:
             self.unpaint(x, y)
+
+
+    def drag_color(self, buttons: int, x: int, y: int) -> None:
+        if buttons == 1:
+            self.paint_fg(self.current_fg_color, x, y)
+        elif buttons == 2:
+            self.paint_bg(self.current_bg_color, x, y)
 
 
     async def click_on_grid(self, event, x: int, y:int) -> None:
@@ -327,8 +344,10 @@ class TileEditor(ui.element):
             toggle_mode_status = OFF
             return
         self.dirty = True
-        if self.last_tool_button is self.paintbrush:
+        if self.last_tool_button is self.patternbrush:
             return self.drag_paint(buttons, x, y)
+        if self.last_tool_button is self.colorbrush:
+            return self.drag_color(buttons, x, y)
         if self.last_tool_button is self.eraser:
             return self.unpaint(x, y)
         if self.last_tool_button is self.inverter:

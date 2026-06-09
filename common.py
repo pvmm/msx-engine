@@ -3,7 +3,7 @@ from nicegui import ui
 
 def run() -> None:
     # Inject your personal Font Awesome Kit script into the document head
-    ui.add_head_html('<script src="https://kit.fontawesome.com/e374aa0b36.js" crossorigin="anonymous"></script>')
+    ui.add_head_html('<script src="https://kit.fontawesome.com/dd0877df2c.js" crossorigin="anonymous"></script>')
 
     # Change tooltip size
     ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
