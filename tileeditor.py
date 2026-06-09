@@ -191,12 +191,16 @@ class TileEditor(ui.element):
 
             with ui.row().classes('gap-2 flex-wrap max-w-[203px]'):
                 # outline default tool
-                text = 'pattern brush\nleft click: draw pixel\nright click: erase pixel'
-                self.patternbrush = ui.button(icon='fa-solid fa-pencil',
+                text = 'combined brush\nleft click: change foreground colour and set pixel\nright click: change background colour line'
+                self.combinedbrush = ui.button(icon='fa-solid fa-magic',
                     on_click=self.on_toggle_tool).tooltip(text).props('outline')
-                self.last_tool_button = self.patternbrush
+                self.last_tool_button = self.combinedbrush
 
-                text = 'color brush\nleft click: change foreground colour\nright click: change background colour line'
+                text = 'pattern brush\nleft click: set pixel\nright click: unset pixel'
+                self.patternbrush = ui.button(icon='fa-solid fa-pencil',
+                    on_click=self.on_toggle_tool).tooltip(text)
+
+                text = 'color brush\nleft click: set foreground colour in the line to selected foreground colour\nright click: set background colour in the line to selected background colour'
                 self.colorbrush = ui.button(icon='fa-solid fa-palette',
                     on_click=self.on_toggle_tool).tooltip(text)
 
@@ -349,14 +353,22 @@ class TileEditor(ui.element):
             self.pixel_refs[y][x].set_colors(None, None, self.grid[y].get_bg())
 
 
-    def drag_paint(self, buttons: int, x: int, y: int) -> None:
+    def drag_combinedbrush(self, buttons: int, x: int, y: int) -> None:
+        if buttons == 1:
+            self.paint(x, y)
+            self.paint_fg(self.current_fg_color, x, y)
+        elif buttons == 2:
+            self.paint_bg(self.current_bg_color, x, y)
+
+
+    def drag_patternbrush(self, buttons: int, x: int, y: int) -> None:
         if buttons == 1:
             self.paint(x, y)
         elif buttons == 2:
             self.unpaint(x, y)
 
 
-    def drag_color(self, buttons: int, x: int, y: int) -> None:
+    def drag_colorbrush(self, buttons: int, x: int, y: int) -> None:
         if buttons == 1:
             self.paint_fg(self.current_fg_color, x, y)
         elif buttons == 2:
@@ -368,10 +380,12 @@ class TileEditor(ui.element):
         buttons = event.args.get('buttons', 0)
         if buttons == 0: return
         self.dirty = True
+        if self.last_tool_button is self.combinedbrush:
+            return self.drag_combinedbrush(buttons, x, y)
         if self.last_tool_button is self.patternbrush:
-            return self.drag_paint(buttons, x, y)
+            return self.drag_patternbrush(buttons, x, y)
         if self.last_tool_button is self.colorbrush:
-            return self.drag_color(buttons, x, y)
+            return self.drag_colorbrush(buttons, x, y)
         if self.last_tool_button is self.eraser:
             return self.unpaint(x, y)
         if self.last_tool_button is self.inverter:
