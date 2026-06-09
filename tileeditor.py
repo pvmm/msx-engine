@@ -122,8 +122,10 @@ class TileEditor(ui.element):
     last_fg_button = None
     last_bg_button = None
     last_tool_button = None
-    # display dialog when erasing?
+    # display dialog when erasing pattern?
     confirm_erasing = True
+    # hide background colour when pixel is visible and foreground colour when it's not?
+    background_occlusion = False
     # data has changed and need saving?
     dirty = False
 
@@ -169,11 +171,16 @@ class TileEditor(ui.element):
             with ui.row().classes('items-center flex-nowrap'):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
-                        with ui.column().classes('items-center'):
-                            menu_item(ui.label('Copy to clipboard as')).classes('mt-4')
-                            self.clipboard_toggle = ui.toggle(COPY_TO_CLIPBOARD_FORMATS, value='index', on_change=self.on_set_copy_format)
+                        with ui.column():
+                            with ui.column().classes('items-center'):
+                                menu_item(ui.label('Copy to clipboard as')).classes('mt-4')
+                                self.clipboard_toggle = ui.toggle(COPY_TO_CLIPBOARD_FORMATS, value='index', on_change=self.on_set_copy_format)
+                            text = 'display dialog when erasing pattern?'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
-                                      on_change=self.toggle_confirm_erasing))
+                                      on_change=self.toggle_confirm_erasing)).tooltip(text)
+                            text = 'hide background colour when pixel is visible and foreground colour when it\'s not?'
+                            menu_item(ui.switch('Display resulting pixel only', value=self.background_occlusion,
+                                      on_change=self.toggle_background_occlusion)).tooltip(text)
                 if self.title:
                     header(self.title)
                 else:
@@ -288,8 +295,12 @@ class TileEditor(ui.element):
                     if sel & 2: self.last_bg_button = button
 
 
-    def toggle_confirm_erasing(self, e) -> None:
+    def toggle_confirm_erasing(self, e: events.ValueChangeEventArguments) -> None:
         self.confirm_erasing = e.value
+
+
+    def toggle_background_occlusion(self, e: events.ValueChangeEventArguments) -> None:
+        self.background_occlusion = e.value
 
 
     def select_tool(self, sender: ui.element) -> None:
