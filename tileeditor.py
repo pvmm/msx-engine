@@ -40,7 +40,6 @@ class TileEditor:
     last_fg_button = None
     last_bg_button = None
     last_tool_button = None
-    last_selected_tool = None
     # display dialog when erasing?
     confirm_erasing = True
     # data has changed and need saving?
@@ -207,7 +206,6 @@ class TileEditor:
         if self.last_tool_button:
             self.last_tool_button._props.pop('outline', None)
         sender.props('outline')
-        self.last_selected_tool = tool
         self.last_tool_button = sender
 
     def on_toggle_tool(self, event, tool: str) -> None:
@@ -300,11 +298,11 @@ class TileEditor:
             toggle_mode_status = OFF
             return
         self.dirty = True
-        if self.last_selected_tool == 'paintbrush':
+        if self.last_tool_button is self.paintbrush:
             return self.drag_paint(buttons, x, y)
-        if self.last_selected_tool == 'eraser':
+        if self.last_tool_button is self.eraser:
             return self.unpaint(x, y)
-        if self.last_selected_tool == 'inverter':
+        if self.last_tool_button is self.inverter:
             return self.invert_line(y)
         await show_message_dialog('Not implemented yet.')
 
