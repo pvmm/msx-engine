@@ -247,7 +247,7 @@ class Project:
 
     async def on_edit_tile_clicked(self, e: events.ClickEventArguments) -> None:
         with ui.dialog() as dialog, ui.card().style('max-width: none;') as parent:
-            editor = TileEditor(parent, Tile8x8().copy(self.selected_tile.grid))
+            editor = TileEditor(parent, Tile8x8.copy(self.selected_tile.grid))
             with ui.row():
                 ui.button('OK', on_click=lambda: dialog.submit(True))
                 ui.button('Cancel', on_click=lambda: dialog.submit(False))

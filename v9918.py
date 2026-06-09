@@ -70,7 +70,7 @@ class Row8:
 
 
     def __str__(self):
-        return f'Row({self.pattern},{self.colors})'
+        return f'Row({bin(self.pattern)},{hex(self.colors)})'
 
 
     def __len__(self):
@@ -106,6 +106,10 @@ class Row8:
 
     def get_bg(self):
         return select_bg(self.colors)
+
+
+    def get_combined(self):
+        return self.colors
 
 
     def __getitem__(self, x):
@@ -146,7 +150,9 @@ class Tile8x8:
         self.patterns[index] = value
 
 
-    def copy(self, tile8x8):
+    @staticmethod
+    def copy(tile8x8):
+        self = Tile8x8()
         for i, row in enumerate(tile8x8.patterns):
             self.patterns[i].copy(row)
         return self
@@ -174,6 +180,10 @@ class Tile8x8:
 
     def get_bg(self, y: int) -> int:
         return self.patterns[y].get_bg()
+
+
+    def get_combined(self, y: int) -> int:
+        return self.patterns[y].get_combined()
 
 
     def mirror_horizontally(self) -> None:
