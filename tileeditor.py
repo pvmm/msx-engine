@@ -36,7 +36,7 @@ async def show_confirm_dialog(message):
     return await dialog
 
 
-class PixelElement(ui.card):
+class UiPixel(ui.card):
     value: bool = False
     fg: int = DEFAULT_FG_COLOR
     bg: int = DEFAULT_BG_COLOR
@@ -47,6 +47,7 @@ class PixelElement(ui.card):
 
     def __init__(self, value: bool, combined: int = None, fg: int = None, bg: int = None, scale: int = None, **kwargs):
         super().__init__(**kwargs)
+        # Just set values before initializing
         self.set_value(value)
         self.set_colors(combined, fg, bg)
         self.set_scale(scale)
@@ -122,6 +123,9 @@ class TileEditor(ui.element):
     last_fg_button = None
     last_bg_button = None
     last_tool_button = None
+    # combined brush
+    dragging = False
+    dragging_on_pixel = False
     # display dialog when erasing pattern?
     confirm_erasing = True
     # hide background colour when pixel is visible and foreground colour when it's not?
@@ -198,26 +202,31 @@ class TileEditor(ui.element):
 
             with ui.row().classes('gap-2 flex-wrap max-w-[203px]'):
                 # outline default tool
-                text = 'combined brush\nleft click: change foreground colour and set pixel\nright click: change background colour line'
-                self.combinedbrush = ui.button(icon='fa-solid fa-magic',
-                    on_click=self.on_toggle_tool).tooltip(text).props('outline')
+                text = '''combined brush
+                    left click on background pixel: change foreground colour and set pixel
+                    left click on foreground pixel: unset pixel only
+                    right click: change background colour line'''
+                self.combinedbrush = ui.button(icon='fa-solid fa-magic', on_click=self.on_toggle_tool).tooltip(text).props('outline')
                 self.last_tool_button = self.combinedbrush
 
-                text = 'pattern brush\nleft click: set pixel\nright click: unset pixel'
-                self.patternbrush = ui.button(icon='fa-solid fa-pencil',
-                    on_click=self.on_toggle_tool).tooltip(text)
+                text = '''pattern brush
+                    left click: set pixel
+                    right click: unset pixel'''
+                self.patternbrush = ui.button(icon='fa-solid fa-pencil', on_click=self.on_toggle_tool).tooltip(text)
 
-                text = 'color brush\nleft click: set foreground colour in the line to selected foreground colour\nright click: set background colour in the line to selected background colour'
-                self.colorbrush = ui.button(icon='fa-solid fa-palette',
-                    on_click=self.on_toggle_tool).tooltip(text)
+                text = '''color brush
+                    left click: set foreground colour in the same line to the selected foreground colour
+                    right click: set background colour in the same line to the selected background colour'''
+                self.colorbrush = ui.button(icon='fa-solid fa-palette', on_click=self.on_toggle_tool).tooltip(text)
 
-                self.eraser = ui.button(icon='fa-solid fa-eraser',
-                    on_click=self.on_toggle_tool).tooltip('eraser')
+                text = '''eraser
+                    left click: unset pixel'''
+                self.eraser = ui.button(icon='fa-solid fa-eraser', on_click=self.on_toggle_tool).tooltip(text)
                 self.eraser.visible = not TOGGLE_MODE
 
-                text = 'inverter\nswitch foreground and background colors and invert pattern in a single line (non destructable)'
-                ui.button(icon='fa-solid fa-plus-minus',
-                    on_click=self.on_toggle_tool).tooltip(text)
+                text = '''inverter
+                    switch foreground and background colours and invert pattern in a single line (non destructable)'''
+                self.inverter = ui.button(icon='fa-solid fa-plus-minus', on_click=self.on_toggle_tool).tooltip(text)
 
                 ui.separator()
 
@@ -256,9 +265,9 @@ class TileEditor(ui.element):
 
                         with ui.row().classes('gap-0'):
                             for x in range(TILE_SIZE):
-                                pixel = PixelElement(0, self.grid[y].get_combined())
-                                pixel.on('mousedown', lambda e, px=x, py=y: self.click_on_grid(e, px, py))
-                                pixel.on('mouseover', lambda e, px=x, py=y: self.click_on_grid(e, px, py))
+                                pixel = UiPixel(0, self.grid[y].get_combined())
+                                pixel.on('mousedown', lambda e, px=x, py=y: self.drag_on_grid(e, px, py))
+                                pixel.on('mouseover', lambda e, px=x, py=y: self.drag_on_grid(e, px, py))
                                 pixel.on('contextmenu.prevent', lambda: None)
                                 row_refs.append(pixel)
                         self.pixel_refs.append(row_refs)
@@ -335,41 +344,47 @@ class TileEditor(ui.element):
     def repaint(self) -> None:
         for y in range(TILE_SIZE):
             for x in range(TILE_SIZE):
+                self.pixel_refs[y][x].set_colors(self.grid[y][x])
                 self.pixel_refs[y][x].repaint()
 
 
     def unpaint(self, x: int, y: int) -> None:
         self.grid.unset_pattern(x, y)
         self.pixel_refs[y][x].set_value(0)
-        self.pixel_refs[y][x].repaint()
 
 
     def paint(self, x: int, y: int) -> None:
         self.grid.set_pattern(x, y)
         self.pixel_refs[y][x].set_value(1)
-        self.pixel_refs[y][x].repaint()
 
 
     def paint_fg(self, index: int, x: int, y: int) -> None:
         self.grid.set_fg(y, index)
-        # repaint fg color if it changed
-        for x in range(TILE_SIZE):
-            self.pixel_refs[y][x].set_colors(None, self.grid[y].get_fg())
 
 
     def paint_bg(self, index: int, x: int, y: int) -> None:
         self.grid.set_bg(y, index)
-        # update bg color if it changed
-        for x in range(TILE_SIZE):
-            self.pixel_refs[y][x].set_colors(None, None, self.grid[y].get_bg())
 
 
     def drag_combinedbrush(self, buttons: int, x: int, y: int) -> None:
         if buttons == 1:
-            self.paint(x, y)
-            self.paint_fg(self.current_fg_color, x, y)
+            if not self.dragging:
+                self.dragging = True
+                self.dragging_on_pixel = self.grid[y].get_pixel(x)
+            if self.dragging_on_pixel:
+                self.grid[y].unset_pattern(x)
+                self.grid[y].set_fg(self.current_fg_color)
+                self.repaint()
+            else:
+                self.grid[y].set_pattern(x)
+                self.grid[y].set_fg(self.current_fg_color)
+                self.repaint()
         elif buttons == 2:
-            self.paint_bg(self.current_bg_color, x, y)
+            self.grid[y].set_bg(self.current_bg_color)
+            self.repaint()
+        else:
+            self.dragging = False
+            self.dragging_on_pixel = False
 
 
     def drag_patternbrush(self, buttons: int, x: int, y: int) -> None:
@@ -377,6 +392,7 @@ class TileEditor(ui.element):
             self.paint(x, y)
         elif buttons == 2:
             self.unpaint(x, y)
+        self.repaint()
 
 
     def drag_colorbrush(self, buttons: int, x: int, y: int) -> None:
@@ -384,21 +400,30 @@ class TileEditor(ui.element):
             self.paint_fg(self.current_fg_color, x, y)
         elif buttons == 2:
             self.paint_bg(self.current_bg_color, x, y)
+        self.repaint()
 
 
-    async def click_on_grid(self, event, x: int, y:int) -> None:
+    def drag_erase(self, buttons: int, x: int, y: int) -> None:
+        self.unpaint(x, y)
+        self.repaint()
+
+
+    async def drag_on_grid(self, event, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
-        if buttons == 0: return
+        if buttons == 0:
+            self.dragging = False
+            return
         self.dirty = True
         if self.last_tool_button is self.combinedbrush:
             return self.drag_combinedbrush(buttons, x, y)
         if self.last_tool_button is self.patternbrush:
             return self.drag_patternbrush(buttons, x, y)
         if self.last_tool_button is self.colorbrush:
+            print('colorbrush!')
             return self.drag_colorbrush(buttons, x, y)
         if self.last_tool_button is self.eraser:
-            return self.unpaint(x, y)
+            return self.drag_erase(buttons, x, y)
         if self.last_tool_button is self.inverter:
             return self.invert_line(y)
         await show_message_dialog('Not implemented yet.')

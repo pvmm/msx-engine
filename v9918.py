@@ -87,6 +87,10 @@ class Row8:
         self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
 
 
+    def get_pixel(self, x: int) -> None:
+        return not not self.pattern & (1 << (7 - x))
+
+
     def set_pattern(self, x: int) -> None:
         self.pattern |= 1 << (7 - x)
 
@@ -156,6 +160,10 @@ class Tile8x8:
         for i, row in enumerate(tile8x8.patterns):
             self.patterns[i].copy(row)
         return self
+
+
+    def get_pixel(self, x: int, y: int) -> None:
+        self.patterns[y].get_pixel(x)
 
 
     def set_pattern(self, x: int, y: int) -> None:
