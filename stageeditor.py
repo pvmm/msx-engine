@@ -3,12 +3,11 @@ import urllib.parse
 
 from nicegui import ui, events
 from nicegui.elements.interactive_image import InteractiveImage
-from typing import List, Tuple
-from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, divide_colors, Tile8x8, grid_to_svg
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile8x8, grid_to_svg
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
-from common import header, get_text_color, menu_item, enable
+from common import header, get_text_color
 
 
 TILE_PIXEL_SIZE = 12
@@ -17,9 +16,10 @@ METATILE_STORAGE_HEIGHT = 100
 
 class MetatileEditor:
     """UI for editing a metatile, allowing to modify its properties and tiles."""
-    tile_editor = None
+    parent: ui.element
+    tile_editor: TileEditor
 
-    def __init__(self, parent, metatile: UiMetatile = None):
+    def __init__(self, parent: ui.element, metatile: UiMetatile | None = None):
         self.parent = parent
         self.metatile = metatile
         self.build_ui()
@@ -29,52 +29,58 @@ class MetatileEditor:
         with self.parent:
             ui.checkbox('Scrollable metatile')
             self.tile_editor = TileEditor(parent=ui.column())
-        enable(self.parent, self.metatile != None)
+        if self.metatile:
+            self.parent.props('enabled')
+        else:
+            self.parent.props('disabled')
 
 
     def update(self, metatile: UiMetatile) -> None:
         self.metatile = metatile
-        enable(self.parent, self.metatile != None)
+        if self.metatile:
+            self.parent.props('enabled')
+        else:
+            self.parent.props('disabled')
 
 
 class UiMetatile(InteractiveImage):
     """Represents a metatile in the UI, allowing to display and select/unselect it."""
-    def __init__(self, data = None, scale = 5):
-        super().__init__()
-        self.scale = scale
+    grid: Tile8x8
 
-        if not data:
-            grid = Tile8x8(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
-        elif isinstance(data, Tile8x8):
-            grid = data
-        else:
-            # Convert from json string
-            grid = json.loads(data)
+    def __init__(self, data: str | Tile8x8 | None = None, scale: int = 5):
+        with self:
+            self.scale = scale
+            if not data:
+                grid = Tile8x8(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
+            elif isinstance(data, Tile8x8):
+                grid = data
+            else:
+                # Convert from json string
+                grid = json.loads(data)
+            self.reload(grid)
 
-        self.reload(grid)
 
-
-    def reload(self, grid) -> None:
+    def reload(self, grid: Tile8x8) -> None:
         self.grid = grid
         data = grid_to_svg(self.grid, self.scale)
-        self.ui = self.set_source(
-            'data:image/svg+xml;utf8,' + urllib.parse.quote(data)
-        )
+        self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))
 
 
 class StageEditor:
     """UI for editing stage metatiles, allowing to create and manage metatiles."""
-    background_tile_cards = None
-    metatile_container = None
-    metatile_collection = []
-    add_metatile_button = None
-    erase_background_tile_button = None
-    selected_tile_card = None
-    selected_tile_index = None
-    selected_metatile_element = None
-    metatile_editor = None
+    background_tiles: set[int]
+    background_tile_cards: ui.row
+    metatile_container: ui.row
+    metatile_collection: list[UiMetatile]
+    add_metatile_button: ui.button
+    erase_background_tile_button: ui.button
+    selected_tile_card: ui.card
+    selected_tile_index: int | None
+    selected_metatile_element: ui.element | None
+    metatile_editor: MetatileEditor
+    palette: list[str] = PALETTE
 
-    def __init__(self, parent):
+    def __init__(self, parent: ui.element):
         self.parent = parent
         self.background_tiles = set()
         self.build_ui()
@@ -98,17 +104,20 @@ class StageEditor:
 
     def on_add_metatile_clicked(self, event: events.ClickEventArguments) -> None:
         # Add ui card with 3 tiles
-        self.add_metatile(self.selected_tile_index)
+        if self.selected_tile_index:
+            self.add_metatile(self.selected_tile_index)
 
 
     def erase_selected_tile(self) -> None:
-        self.background_tiles.remove(self.selected_tile_index)
-        self.selected_tile_card.delete()
+        if self.selected_tile_index:
+            self.background_tiles.remove(self.selected_tile_index)
+        if self.selected_tile_card:
+            self.selected_tile_card.delete()
         self.selected_tile_index = None
         self.enable_tile_buttons(False)
 
 
-    def on_erase_tile(self, event) -> None:
+    def on_erase_tile(self, event: events.ClickEventArguments) -> None:
         self.erase_selected_tile()
 
 
@@ -122,7 +131,7 @@ class StageEditor:
             with ui.row().classes('gap-8 w-full'):
                 with ui.row().classes('items-center flex-nowrap'):
                     ui.label('Add background tile by color').classes('whitespace-nowrap')
-                    self.draw_color_dropdown(PALETTE)
+                    self.draw_color_dropdown(self.palette)
 
                     # background colour container
                     with ui.row().classes('items-center gap-2 px-2 min-w-[400px]') as self.background_tile_cards:
@@ -156,8 +165,8 @@ class StageEditor:
             self.metatile_editor = MetatileEditor(ui.card().classes('w-full'))
 
 
-    def set_background_tile_style(self, element: ui.element, color = '#000000') -> None:
-        return element.style(
+    def set_background_tile_style(self, element: ui.element, color: str = '#000000') -> None:
+        element.style(
             f'''
             width: {TILE_PIXEL_SIZE}px;
             height: {TILE_PIXEL_SIZE}px;
@@ -169,44 +178,50 @@ class StageEditor:
         )
 
 
-    def select_background_tile(self, element: ui.element, index: int) -> ui.element:
+    def select_background_tile(self, card: ui.card, index: int) -> ui.card:
+        # unselect previous tile
         if self.selected_tile_card:
             self.selected_tile_card.style('border: 1px solid #444;')
-        self.selected_tile_card = element.style('border: 3px solid #444;')
+        # select new tile
+        self.selected_tile_card = card.style('border: 3px solid #444;')
         self.selected_tile_index = index
         self.enable_tile_buttons()
-        return element
+        return card
 
 
-    def on_select_background_tile(self, e: events.GenericEventArguments, index: int) -> None:
-        self.select_background_tile(e.sender, index)
+    def on_select_background_tile(self, event: events.GenericEventArguments, index: int) -> None:
+        if isinstance(event.sender, ui.card):
+            self.select_background_tile(event.sender, index)
 
 
-    def add_background_tile(self, index: int, color: str) -> ui.element:
+    def add_background_tile(self, index: int, color: str) -> ui.element | None:
         pos = len(self.background_tiles)
         self.background_tiles.add(index)
-        if pos == len(self.background_tiles): return
+        if pos == len(self.background_tiles): return None
         with self.background_tile_cards:
-            return self.select_background_tile(
-                    self.set_background_tile_style(
-                        ui.card().on('mousedown', lambda e, i=index: self.on_select_background_tile(e, i)) \
-                                .tooltip(f'color #{index} ({color})').move(target_index = pos),
-                                color
-                    ),
-                index)
+            card = ui.card().on('mousedown', lambda e, i=index: self.on_select_background_tile(e, i))
+            card.tooltip(f'color #{index} ({color})').move(target_index = pos)
+            self.set_background_tile_style(card, color)
+            self.select_background_tile(card, index)
+        return card
 
 
     def enable_tile_buttons(self, status: bool = True) -> None:
-        enable(self.erase_background_tile_button, status)
-        enable(self.add_metatile_button, status)
+        if status:
+            self.erase_background_tile_button.props('enabled')
+            self.add_metatile_button.props('enabled')
+        else:
+            self.erase_background_tile_button.props('disabled')
+            self.add_metatile_button.props('disabled')
 
 
-    def on_add_background_tile(self, event, index: int) -> None:
-        color = event.sender._props.get('color')
+    def on_add_background_tile(self, event: events.ClickEventArguments, index: int) -> None:
+        color: str = self.palette[index]
+        # color: str = event.sender._props.get('color')
         self.add_background_tile(index, color)
 
 
-    def draw_color_dropdown(self, palette) -> None:
+    def draw_color_dropdown(self, palette: list[str]) -> None:
         with ui.dropdown_button('select color', auto_close=True):
             for index, color in enumerate(palette[1:], start=1):
                 ui.item(f'color {index}', on_click=lambda e, i=index: self.on_add_background_tile(e, i)) \

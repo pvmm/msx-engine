@@ -3,7 +3,7 @@ import json
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE
 from common import header, get_text_color, menu_item
-from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, select_fg, select_bg, divide_colors
+from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors
 
 # constants
 GRID_FG_LAYER_SIZE = 16        # size of foreground color pixel
@@ -17,21 +17,21 @@ DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 toggle_mode_status = OFF
 
 # functions
-async def show_message_dialog(message) -> None:
+async def show_message_dialog(message: str) -> str:
     with ui.dialog() as dialog, ui.card():
         ui.label(message)
         with ui.row():
             ui.button('OK', on_click=lambda: dialog.submit('OK'))
-    result = await dialog
+    return str(await dialog)
 
 
-async def show_confirm_dialog(message) -> str:
+async def show_confirm_dialog(message: str) -> str:
     with ui.dialog() as dialog, ui.card():
         ui.label(message)
         with ui.row():
             ui.button('YES', on_click=lambda: dialog.submit('yes'))
             ui.button('NO', on_click=lambda: dialog.submit('no'))
-    return await dialog
+    return str(await dialog)
 
 
 class UiPixel(ui.card):
@@ -41,19 +41,19 @@ class UiPixel(ui.card):
     initialized: bool = False
 
     # ui elements
-    inner = None
+    inner: ui.card
 
-    def __init__(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None, scale: int | None = None, **kwargs):
-        super().__init__(**kwargs)
-        # Just set values before initializing
-        self.set_value(value)
-        self.set_colors(combined, fg, bg)
-        self.set_scale(scale)
-        self.initialized = True
-        self.build_ui()
+    def __init__(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None, scale: int | None = None):
+        with self:
+            # Just set values before initializing
+            self.set_value(value)
+            self.set_colors(combined, fg, bg)
+            self.set_scale(scale)
+            self.initialized = True
+            self.build_ui()
 
 
-    def set_value(self, value: bool):
+    def set_value(self, value: bool) -> None:
         self.value = value
 
 
@@ -116,29 +116,29 @@ class UiPixel(ui.card):
 
 
 class TileEditor(ui.element):
-    current_fg_color = DEFAULT_FG_COLOR
-    current_bg_color = DEFAULT_BG_COLOR
-    last_fg_button = None
-    last_bg_button = None
-    last_tool_button = None
+    current_fg_color: int = DEFAULT_FG_COLOR
+    current_bg_color: int = DEFAULT_BG_COLOR
+    last_fg_button: ui.button
+    last_bg_button: ui.button
+    last_tool_button: ui.button
     # combined brush
-    dragging = False
-    dragging_on_pixel = False
+    dragging: bool = False
+    dragging_on_pixel: bool = False
     # display dialog when erasing pattern?
-    confirm_erasing = True
+    confirm_erasing: bool = True
     # hide background colour when pixel is visible and foreground colour when it's not?
-    background_occlusion = False
+    background_occlusion: bool = False
     # data has changed and need saving?
-    dirty = False
+    dirty: bool = False
 
     # ui elements
-    patternbrush = None
-    colorbrush = None
-    eraser = None
-    inverter = None
+    patternbrush: ui.button
+    colorbrush: ui.button
+    eraser: ui.button
+    inverter: ui.button
 
-    def __init__(self, parent: ui.element, grid: list[list[int]] = None, fg: int | None = None, bg: int | None = None, **kwargs):
-        super().__init__('div', **kwargs) 
+    def __init__(self, parent: ui.element, grid: object | None = None, fg: int | None = None, bg: int | None = None):
+        super().__init__('div')
         self.parent = parent
 
         # selected colours from palette
@@ -153,7 +153,7 @@ class TileEditor(ui.element):
         elif isinstance(grid, Tile8x8):
             self.grid = grid
         else:
-            self.grid = json.load(grid)
+            self.grid = json.load(grid) # type: ignore
 
         # define editor title
         width = len(self.grid[0])
@@ -161,7 +161,7 @@ class TileEditor(ui.element):
         self.title = f'{width}x{height} Tile'
 
         self.set_pixel_function = self.grid.set_pattern
-        self.pixel_refs: list[list[ui.element]] = []
+        self.pixel_refs: list[list[UiPixel]] = []
         self.bg_color_refs: list[list[ui.element]] = []
         self.fg_color_refs: list[list[ui.element]] = []
 
@@ -249,7 +249,7 @@ class TileEditor(ui.element):
                 ui.separator()
 
                 ui.button(icon='fa-solid fa-copy', on_click=self.copy_to_clipboard).props('color=green').tooltip('copy pattern to clipboard')
-                ui.button(icon='fa-solid fa-trash', on_click=self.clear).props('color=red').tooltip('erase tile completely')
+                ui.button(icon='fa-solid fa-trash', on_click=self.confirm_clear).props('color=red').tooltip('erase tile completely')
 
 
     def build_grid(self) -> None:
@@ -259,11 +259,11 @@ class TileEditor(ui.element):
                 with ui.column().classes('gap-0'):
                     ui.label('Grid').classes('text-lg font-semibold')
                     for y in range(TILE_SIZE):
-                        row_refs = []
+                        row_refs: list[UiPixel] = []
 
                         with ui.row().classes('gap-0'):
                             for x in range(TILE_SIZE):
-                                pixel = UiPixel(0, self.grid[y].get_combined())
+                                pixel = UiPixel(False, self.grid[y].get_combined())
                                 pixel.on('mousedown', lambda e, px=x, py=y: self.drag_on_grid(e, px, py))
                                 pixel.on('mouseover', lambda e, px=x, py=y: self.drag_on_grid(e, px, py))
                                 pixel.on('contextmenu.prevent', lambda: None)
@@ -271,7 +271,7 @@ class TileEditor(ui.element):
                         self.pixel_refs.append(row_refs)
 
 
-    def get_label(self, index) -> str:
+    def get_label(self, index: int) -> str:
         n = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
         return ['', 'F', 'B', 'FB'][n]
 
@@ -284,7 +284,8 @@ class TileEditor(ui.element):
                 for index, color in enumerate(PALETTE[1:], start=1):
                     sel = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
                     # chicungunha
-                    button = ui.button(self.get_label(index)) \
+                    button = ui.button(self.get_label(index),
+                                       on_click=lambda e, i=index: self.select_fg_color(e, i)) \
                         .style(
                             f'''
                             width: 40px;
@@ -296,47 +297,51 @@ class TileEditor(ui.element):
                         ) \
                         .tooltip(color) \
                         .props(f'{color=} text-color={get_text_color(color)}') \
-                        .on('click', lambda e, i=index: self.select_fg_color(e, i)) \
                         .on('contextmenu.prevent', lambda e, i=index: self.select_bg_color(e, i))
                     if sel & 1: self.last_fg_button = button
                     if sel & 2: self.last_bg_button = button
 
 
-    def toggle_confirm_erasing(self, e: events.ValueChangeEventArguments) -> None:
-        self.confirm_erasing = e.value
+    def toggle_confirm_erasing(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+        if event.value is not None:
+            self.confirm_erasing = event.value
 
 
-    def toggle_background_occlusion(self, e: events.ValueChangeEventArguments) -> None:
-        self.background_occlusion = e.value
+    def toggle_background_occlusion(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+        if event.value is not None:
+            self.background_occlusion = event.value
 
 
     def select_tool(self, sender: ui.element) -> None:
         if self.last_tool_button:
             self.last_tool_button._props.pop('outline', None)
         sender.props('outline')
-        self.last_tool_button = sender
+        if isinstance(sender, ui.button):
+            self.last_tool_button = sender
 
 
-    def on_toggle_tool(self, event) -> None:
+    def on_toggle_tool(self, event: events.ClickEventArguments) -> None:
         self.select_tool(event.sender)
 
 
-    def select_fg_color(self, event, index: int) -> None:
+    def select_fg_color(self, event: events.ClickEventArguments, index: int) -> None:
         tmp = self.current_fg_color
         self.current_fg_color = index
         if self.last_fg_button:
             self.last_fg_button.set_text(self.get_label(tmp))
-        event.sender.set_text(self.get_label(index))
-        self.last_fg_button = event.sender
+        if isinstance(event.sender, ui.button):
+            event.sender.set_text(self.get_label(index))
+            self.last_fg_button = event.sender
 
 
-    def select_bg_color(self, event, index: int) -> None:
+    def select_bg_color(self, event: events.GenericEventArguments, index: int) -> None:
         tmp = self.current_bg_color
         self.current_bg_color = index
         if self.last_bg_button:
             self.last_bg_button.set_text(self.get_label(tmp))
-        event.sender.set_text(self.get_label(index))
-        self.last_bg_button = event.sender
+        if isinstance(event.sender, ui.button):
+            event.sender.set_text(self.get_label(index))
+            self.last_bg_button = event.sender
 
 
     def repaint(self) -> None:
@@ -348,12 +353,12 @@ class TileEditor(ui.element):
 
     def unpaint(self, x: int, y: int) -> None:
         self.grid.unset_pattern(x, y)
-        self.pixel_refs[y][x].set_value(0)
+        self.pixel_refs[y][x].set_value(False)
 
 
     def paint(self, x: int, y: int) -> None:
         self.grid.set_pattern(x, y)
-        self.pixel_refs[y][x].set_value(1)
+        self.pixel_refs[y][x].set_value(True)
 
 
     def paint_fg(self, index: int, x: int, y: int) -> None:
@@ -368,7 +373,7 @@ class TileEditor(ui.element):
         if buttons == 1:
             if not self.dragging:
                 self.dragging = True
-                self.dragging_on_pixel = self.grid[y].get_pixel(x)
+                self.dragging_on_pixel = bool(self.grid[y].get_pixel(x))
             if self.dragging_on_pixel:
                 self.grid[y].unset_pattern(x)
                 self.grid[y].set_fg(self.current_fg_color)
@@ -406,7 +411,7 @@ class TileEditor(ui.element):
         self.repaint()
 
 
-    async def drag_on_grid(self, event, x: int, y:int) -> None:
+    async def drag_on_grid(self, event: events.GenericEventArguments, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
         if buttons == 0:
@@ -427,20 +432,6 @@ class TileEditor(ui.element):
         await show_message_dialog('Not implemented yet.')
 
 
-    def click_on_grid_old(self, event: int, x: int, y: int) -> None:
-        # discard mouseover when no button is pressed
-        buttons = event.args.get('buttons', 0)
-        if buttons == 0: return
-        if buttons == 1:
-            if self.grid.get_fg(y) == self.current_fg_color: return
-            self.grid.set_fg(y, self.current_fg_color)
-        if buttons == 2:
-            if self.grid.get_bg(y) == self.current_bg_color: return
-            self.grid.set_bg(y, self.current_bg_color)
-        self.dirty = True
-        self.repaint()
-
-
     def invert_line(self, y: int) -> None:
         fg, bg = self.grid.get_fg(y), self.grid.get_bg(y)
         self.grid[y].set_fg(bg)
@@ -449,7 +440,7 @@ class TileEditor(ui.element):
         self.repaint()
 
 
-    async def clear(self) -> None:
+    async def confirm_clear(self) -> None:
         result = await show_confirm_dialog('Are you sure you want to delete the tile?') \
                 if self.confirm_erasing and self.dirty else 'yes'
         if result == 'yes':
@@ -462,12 +453,11 @@ class TileEditor(ui.element):
             self.dirty = False
 
 
-    def on_set_copy_format(self, event: events.ValueChangeEventArguments) -> None:
+    def on_set_copy_format(self, event: events.ValueChangeEventArguments[str]) -> None:
         self.grid.set_copy_format(event.value)
 
 
     def copy_to_clipboard(self, event: events.ClickEventArguments) -> None:
-        self.grid.set_copy_style(self.bla)
         script = f'''navigator.clipboard.writeText("{self.grid}")'''
         ui.run_javascript(script)
 

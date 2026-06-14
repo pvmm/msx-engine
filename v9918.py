@@ -36,7 +36,7 @@ def mirror(pattern: int) -> int:
     return pattern
 
 
-def grid_to_svg(grid: list[list[int]], scale: int = 20) -> str:
+def grid_to_svg(grid: Tile8x8 | list[list[int]], scale: int = 20) -> str:
     width = len(grid[0])
     height = len(grid)
 

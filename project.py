@@ -1,8 +1,8 @@
 from nicegui import ui, events
 from tileeditor import TileEditor
 from stageeditor import UiMetatile
-from common import header, get_text_color, menu_item, enable
-from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile8x8
+from common import header, get_text_color
+from v9918 import PALETTE, DEFAULT_FG_COLOR, Tile8x8
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
 
 
@@ -34,77 +34,81 @@ FPS_OPTIONS = ['frame rate', 'half the frame rate', 'quarter the frame rate']
 class Project:
     # settings
     target = TARGET_OPTIONS[0]
-    available_tiles = 256
-    scrolling_tiles = available_tiles
-    palette = False
-    r18_hardware_scroll = False
-    megarom = False
-    force_frame_rate = False
-    frame_rate = FRAME_RATE_OPTIONS[0]
-    rom_type = ROM_OPTIONS[0]
-    _105_color_mode = False
-    fps = FPS_OPTIONS.index('frame rate')
-    scroll_pixels = 8
-    project_type = list(PROJECT_TYPES.keys())[0]
-    project_changed = True
-    tiles_changed = False
-    selected_tile_index = None
+    available_tiles: int = 256
+    scrolling_tiles: int = available_tiles
+    palette: bool = False
+    r18_hardware_scroll: bool = False
+    megarom: bool = False
+    force_frame_rate: bool = False
+    frame_rate: str = FRAME_RATE_OPTIONS[0]
+    rom_type: str = ROM_OPTIONS[0]
+    _105_color_mode: bool = False
+    fps: int = FPS_OPTIONS.index('frame rate')
+    scroll_pixels: int = 8
+    project_type: str = list(PROJECT_TYPES.keys())[0]
+    project_changed: bool = True
+    tiles_changed: bool = False
+    selected_tile_index: int | None = None
+    initialized = False
 
     # ui elements
-    scrolling_tiles_badge = None
-    frame_rate_badge = None
-    frame_rate_radio = None
-    fps_badge = None
-    target_badge = None
-    second_pattern_checkbox = None
-    r18_checkbox = None
-    scroll_pixels_radio = None
-    tiles = None
-    selected_tile = None
+    scrolling_tiles_badge: ui.badge
+    frame_rate_badge: ui.badge
+    frame_rate_radio: ui.radio
+    fps_badge: ui.badge
+    target_badge: ui.badge
+    second_pattern_checkbox: ui.checkbox
+    r18_checkbox: ui.checkbox
+    scroll_pixels_radio: ui.radio
+    tiles: ui.element
+    selected_tile: UiMetatile | None
 
-    def __init__(self, parent):
+    def __init__(self, parent: ui.element) -> None:
         self.parent = parent
         self.build_ui()
+        self.initialized = True
 
-    async def change_project_type(self, e: events.ValueChangeEventArguments) -> None:
-        if e.value != self.project_type and self.tiles_changed:
+
+    async def change_project_type(self, event: events.ValueChangeEventArguments[str]) -> None:
+        if event.value != self.project_type and self.tiles_changed:
             with ui.dialog() as dialog, ui.card():
                 ui.label('Changing project type will delete extra tiles. Are you sure?')
                 with ui.row():
                     ui.button('Yes', on_click=lambda: dialog.submit(True))
                     ui.button('No', on_click=lambda: dialog.submit(False))
-            result = await dialog
-        elif not self.tiles_changed:
+            result: bool = await dialog
+        else:
             result = True
         if result:
-            self.project_type = e.value
-            if self.project_type != 'static screen':
-                self.r18_checkbox.enable()
-                self.scroll_pixels_radio.enable()
-            else:
-                self.r18_checkbox.disable()
-                self.scroll_pixels_radio.disable()
-            ui.notify(f'Project type changed to {self.project_type}')
-        else:
-            e.sender.set_value(self.project_type)
+            if self.initialized:
+                self.project_type = event.value
+                if self.project_type != 'static screen':
+                    self.r18_checkbox.enable()
+                    self.scroll_pixels_radio.enable()
+                else:
+                    self.r18_checkbox.disable()
+                    self.scroll_pixels_radio.disable()
+                ui.notify(f'Project type changed to {self.project_type}')
+            elif isinstance(event.sender, ui.toggle):
+                event.sender.set_value(self.project_type)
 
 
-    def reserve_second_pattern_table(self, e: events.ValueChangeEventArguments) -> None:
-        if e.value:
+    def reserve_second_pattern_table(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+        if event.value:
             self.available_tiles *= 2
         else:
             self.available_tiles //= 2
         if not self.r18_hardware_scroll:
-            scrolling_tiles = self.available_tiles // (8 // self.scroll_pixels)
+            self.scrolling_tiles = self.available_tiles // (8 // self.scroll_pixels)
         else:
-            scrolling_tiles = self.available_tiles
-        ui.notify(f'Amount of tiles available: {scrolling_tiles}')
-        self.scrolling_tiles_badge.set_text(scrolling_tiles)
+            self.scrolling_tiles = self.available_tiles
+        ui.notify(f'Amount of tiles available: {self.scrolling_tiles}')
+        self.scrolling_tiles_badge.set_text(str(self.scrolling_tiles))
 
 
-    def set_105_color_mode(self, e) -> None:
+    def set_105_color_mode(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global FPS_OPTIONS
-        if e.value:
+        if event.value:
             self.fps += 1
             self.second_pattern_checkbox.disable()
             self.available_tiles //= 2
@@ -112,12 +116,12 @@ class Project:
             self.fps -= 1
             self.second_pattern_checkbox.enable()
             self.available_tiles *= 2
-        self.second_pattern_checkbox.value = e.value
+        self.second_pattern_checkbox.value = event.value
         self.fps_badge.set_text(FPS_OPTIONS[self.fps])
 
 
-    def detach_pattern_layers(self, e) -> None:
-        if e.value:
+    def detach_pattern_layers(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+        if event.value:
             self.available_tiles *= 3
         else:
             self.available_tiles //= 3
@@ -126,7 +130,7 @@ class Project:
         else:
             self.scrolling_tiles = self.available_tiles
         ui.notify(f'Amount of tiles available: {self.scrolling_tiles}')
-        self.scrolling_tiles_badge.set_text(self.scrolling_tiles)
+        self.scrolling_tiles_badge.set_text(str(self.scrolling_tiles))
 
 
     def update_fps_badge(self) -> None:
@@ -138,63 +142,64 @@ class Project:
                 ui.label(f'({self.frame_rate})')
 
 
-    def force_specific_frame_rate(self, e) -> None:
+    def force_specific_frame_rate(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global TARGET_OPTIONS
-        if e.value:
+        if event.value:
             self.frame_rate_badge.set_text(self.frame_rate_radio.value)
             self.frame_rate_radio.enable()
         else:
             self.frame_rate_radio.disable()
-        self.target = TARGET_OPTIONS[1 if e.value else 0]
+        self.target = TARGET_OPTIONS[1 if event.value else 0]
         self.frame_rate = self.frame_rate_radio.value
         self.target_badge.set_text(self.target)
-        self.frame_rate_badge.visible = e.value
+        self.frame_rate_badge.visible = event.value
         ui.notify(f'Target platform set to {self.target}')
 
 
-    def change_frame_rate(self, e) -> None:
+    def change_frame_rate(self, event: events.ValueChangeEventArguments[str]) -> None:
         self.frame_rate_badge.visible = True
         # todo: change to e.sender.value?
         self.frame_rate_badge.set_text(self.frame_rate_radio.value)
 
 
-    def set_scroll_in_pixels(self, e) -> None:
-        if e.value != self.scroll_pixels and not self.r18_hardware_scroll:
-            tmp = self.available_tiles // (8 // e.value)
+    def set_scroll_in_pixels(self, event: events.ValueChangeEventArguments[int]) -> None:
+        if event.value != self.scroll_pixels and not self.r18_hardware_scroll:
+            tmp = self.available_tiles // (8 // event.value)
             if self.scrolling_tiles != tmp:
                 ui.notify(f'Amount of tiles available: {self.scrolling_tiles}')
             self.scrolling_tiles = tmp
-            self.scroll_pixels = e.value
-        self.scrolling_tiles_badge.set_text(self.scrolling_tiles)
+            self.scroll_pixels = event.value
+        self.scrolling_tiles_badge.set_text(str(self.scrolling_tiles))
 
 
-    def allow_palette_change(self, e) -> None:
+    def allow_palette_change(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global TARGET_OPTIONS
-        self.palette = e.value
-        self.target = TARGET_OPTIONS[1 if e.value else 0]
+        if event.value:
+            self.palette = event.value
+        self.target = TARGET_OPTIONS[1 if event.value else 0]
         self.target_badge.set_text(self.target)
         ui.notify(f'Target platform set to {self.target}')
 
 
-    def set_r18(self, e) -> None:
+    def set_r18(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global TARGET_OPTIONS
-        self.r18_hardware_scroll = e.value
-        if e.value:
+        if event.value:
+            self.r18_hardware_scroll = event.value
             self.scrolling_tiles = self.available_tiles
         else:
             self.scrolling_tiles = self.available_tiles // (8 // self.scroll_pixels)
-        self.target = TARGET_OPTIONS[1 if e.value else 0]
+        self.target = TARGET_OPTIONS[1 if event.value else 0]
         self.target_badge.set_text(self.target)
-        self.scrolling_tiles_badge.set_text(self.scrolling_tiles)
+        self.scrolling_tiles_badge.set_text(str(self.scrolling_tiles))
         ui.notify(f'Amount of tiles available: {self.scrolling_tiles}')
         ui.notify(f'Target platform set to {self.target}')
 
 
-    def toggle_megarom(self, e) -> None:
+    def toggle_megarom(self, event: events.ClickEventArguments) -> None:
         pass
 
 
-    def set_tile_style(self, element: ui.element, color = '#000000') -> None:
+    def set_tile_style(self, element: ui.element, color: str = '#000000') -> ui.element:
         return element.style(
             f'''
             width: {TILE_PIXEL_SIZE}px;
@@ -208,19 +213,25 @@ class Project:
 
 
     def enable_tile_buttons(self, status: bool = True) -> None:
-        enable(self.edit_tile_button, status)
-        enable(self.erase_tile_button, status)
+        if status:
+            self.edit_tile_button.enable()
+            self.erase_tile_button.enable()
+        else:
+            self.edit_tile_button.disable()
+            self.erase_tile_button.disable()
 
 
-    def select_tile(self, element: ui.element) -> None:
+    def select_tile(self, metatile: UiMetatile) -> UiMetatile:
         if self.selected_tile:
             self.selected_tile.style('border: 1px solid #444;')
-        self.selected_tile = element.style('border: 3px solid #444;')
+        self.selected_tile = metatile.style('border: 3px solid #444;')
         self.enable_tile_buttons(True)
+        return self.selected_tile
 
 
-    def on_select_tile(self, e: events.GenericEventArguments) -> None:
-        self.select_tile(e.sender)
+    def on_select_tile(self, event: events.GenericEventArguments) -> None:
+        if isinstance(event.sender, UiMetatile):
+            self.select_tile(event.sender)
 
 
     def add_tile(self, bg_color: int) -> UiMetatile:
@@ -235,7 +246,7 @@ class Project:
         self.enable_tile_buttons()
 
 
-    def draw_color_dropdown(self, palette) -> None:
+    def draw_color_dropdown(self, palette: list[str]) -> None:
         with ui.dropdown_button('select color', auto_close=True):
             for index, color in enumerate(palette[1:], start=1):
                 ui.item(f'color {index}', on_click=lambda e, i=index: self.on_add_tile(e, i)) \
@@ -245,27 +256,32 @@ class Project:
                         ''').props(f'{color=}')
 
 
-    async def on_edit_tile_clicked(self, e: events.ClickEventArguments) -> None:
+    async def on_edit_tile_clicked(self, event: events.ClickEventArguments) -> None:
+        editor = None
         with ui.dialog() as dialog, ui.card().style('max-width: none;') as parent:
-            editor = TileEditor(parent, Tile8x8.copy(self.selected_tile.grid))
+            if self.selected_tile:
+                if self.selected_tile:
+                    acopy = Tile8x8.copy(self.selected_tile.grid)
+                    editor = TileEditor(parent, acopy)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
                 ui.button('Cancel', on_click=lambda: dialog.submit(False))
         result = await dialog
-        if result:
+        if result and editor and self.selected_tile:
             # return tile changes
             self.selected_tile.reload(editor.grid)
 
 
-    def erase_tile(self, element: ui.element) -> None:
+    def erase_tile(self, tile: UiMetatile) -> None:
         if self.selected_tile:
-            self.tiles.remove(element)
+            self.tiles.remove(tile)
             self.selected_tile = None
         self.enable_tile_buttons(False)
 
 
     def on_erase_tile(self, event: events.ClickEventArguments) -> None:
-        self.erase_tile(self.selected_tile)
+        if self.selected_tile:
+            self.erase_tile(self.selected_tile)
 
 
     def build_ui(self) -> None:
@@ -304,18 +320,18 @@ class Project:
                 header('Display engine')
                 with ui.column().classes('ml-8'):
                     self.second_pattern_checkbox = ui.checkbox('Reserve second pattern table in VRAM for next frame',
-                           on_change=lambda e: self.reserve_second_pattern_table(e))
+                           on_change=self.reserve_second_pattern_table)
                     with ui.column().classes('ml-8'):
                         with ui.row().classes('items-center flex-nowrap'):
                             ui.icon('warning', color='warning').classes('text-xl')
                             ui.label('This option may double the required VRAM data transfer when updating tile patterns dinamically.')
-                    ui.checkbox('105 color mode', on_change=lambda e: self.set_105_color_mode(e))
+                    ui.checkbox('105 color mode', on_change=self.set_105_color_mode)
                     with ui.column().classes('ml-8'):
                         with ui.row().classes('items-center flex-nowrap'):
                             ui.icon('warning', color='warning').classes('text-xl')
                             ui.label('This option reduces color clash but also reduces the game frame rate by half and may cause flicker.')
                     ui.checkbox('Detach pattern layers for each third of screen region',
-                            on_change=lambda e: self.detach_pattern_layers(e))
+                            on_change=self.detach_pattern_layers)
                     with ui.column().classes('ml-8'):
                         with ui.row().classes('items-center flex-nowrap'):
                             ui.icon('info', color='black').classes('text-xl')
@@ -323,14 +339,14 @@ class Project:
 
                     header('MSX2 features')
                     with ui.column().classes('ml-8'):
-                        ui.checkbox('Allow palette change', on_change=lambda e: self.allow_palette_change(e))
-                        self.r18_checkbox = ui.checkbox('R#18 hardware scroll', on_change=lambda e: self.set_r18(e)).disable()
+                        ui.checkbox('Allow palette change', on_change=self.allow_palette_change)
+                        self.r18_checkbox = ui.checkbox('R#18 hardware scroll', on_change=self.set_r18).disable()
                         with ui.column().classes('ml-8'):
                             with ui.row().classes('items-center flex-nowrap'):
                                 ui.icon('info', color='black').classes('text-xl')
                                 ui.label('This option will cause visible artifacts on the left and right edges of the screen.')
 
-                        ui.checkbox('Force specific frame rate', on_change=lambda e: self.force_specific_frame_rate(e))
+                        ui.checkbox('Force specific frame rate', on_change=self.force_specific_frame_rate)
                         with ui.column().classes('ml-8'):
                             self.frame_rate_radio = ui.radio(FRAME_RATE_OPTIONS, value=FRAME_RATE_OPTIONS[0],
                                     on_change=lambda e: self.change_frame_rate(e)).props('inline').disable()

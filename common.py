@@ -8,13 +8,13 @@ def run() -> None:
     # Change tooltip size
     ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
 
-    ui.run(title='NiceGUI Tile Editor')
-
+    ui.run(title='NiceGUI Tile Editor') 
+    
 
 def header(text: str) -> ui.element:
     'Common header format'
-    ui.element('div')
-    return ui.label(text).classes('text-2xl font-semibold')
+    with ui.element('div'):
+        return ui.label(text).classes('text-2xl font-semibold')
 
 
 def hex_to_rgb(hex_string: str) -> tuple[int, int, int]:
@@ -31,17 +31,10 @@ def hex_to_rgb(hex_string: str) -> tuple[int, int, int]:
 def get_text_color(bg_color: str) -> str:
     'Returns a text color that is distinct from background color'
     r, g, b = hex_to_rgb(bg_color)
-    luma = (r * 0.299 + g * 0.587 + b * 0.114) / 255
+    luma: float = (r * 0.299 + g * 0.587 + b * 0.114) / 255
     return 'black' if luma > 0.5 else 'white'
 
 
 def menu_item(element: ui.element) -> ui.element:
     'Mickeymouses weird spacing issue of the menu item'
     return element.classes('mx-4')
-
-
-def enable(element: ui.element, status: bool = True) -> None:
-    if status:
-        element._props.pop('disabled')
-    else:
-        element.props('disabled')

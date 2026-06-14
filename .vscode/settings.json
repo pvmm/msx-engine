@@ -1,3 +1,9 @@
 {
-  "python.defaultInterpreterPath": "/c/Users/Pedro/repos/msx-engine/.venv/Scripts/python"
+  "python.defaultInterpreterPath": "C:/Users/Pedro/repos/msx-engine/.venv/Scripts/python.exe",
+  "mypy-type-checker.interpreter": [
+    "C:/Users/Pedro/repos/msx-engine/.venv/Scripts/python.exe"
+  ],
+  "mypy-type-checker.args": [
+    "--config-file=pyproject.toml"
+  ],
 }
