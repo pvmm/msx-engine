@@ -1,6 +1,6 @@
 from nicegui import ui, events
 from tileeditor import TileEditor
-from stageeditor import Metatile
+from stageeditor import UiMetatile
 from common import header, get_text_color, menu_item, enable
 from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile8x8
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
@@ -223,10 +223,10 @@ class Project:
         self.select_tile(e.sender)
 
 
-    def add_tile(self, bg_color: int) -> Metatile:
+    def add_tile(self, bg_color: int) -> UiMetatile:
         with self.tiles:
             tooltip = f'color #{bg_color} ({PALETTE[bg_color]})'
-            return self.select_tile(Metatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
+            return self.select_tile(UiMetatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
                     .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
 
 
@@ -292,7 +292,7 @@ class Project:
                     ui.badge('16K', color='red')
                 with ui.row().classes('items-center flex-nowrap'):
                     ui.label('Amount of tiles available:')
-                    self.scrolling_tiles_badge = ui.badge(self.available_tiles, color='orange')
+                    self.scrolling_tiles_badge = ui.badge(str(self.available_tiles), color='orange')
                 with ui.row().classes('items-center flex-nowrap'):
                     ui.label('Frames per second:')
                     self.fps_badge = ui.badge(FPS_OPTIONS[self.fps], color='brown')

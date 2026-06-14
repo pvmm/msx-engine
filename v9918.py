@@ -20,7 +20,7 @@ def select_bg(combined: int) -> int:
     return combined & 0x0f
 
 
-def divide_colors(combined: int) -> [int, int]:
+def divide_colors(combined: int) -> tuple[int, int]:
     return select_fg(combined), select_bg(combined)
 
 
@@ -69,11 +69,11 @@ class Row8:
         self.colors = combine_colors(fg, bg)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Row({bin(self.pattern)},{hex(self.colors)})'
 
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 8
 
 
@@ -87,7 +87,7 @@ class Row8:
         self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
 
 
-    def get_pixel(self, x: int) -> None:
+    def get_pixel(self, x: int) -> int:
         return not not self.pattern & (1 << (7 - x))
 
 
@@ -104,19 +104,19 @@ class Row8:
         self.colors = (self.colors & 0xf0) | (index & 0x0f)
 
 
-    def get_fg(self):
+    def get_fg(self) -> int:
         return select_fg(self.colors)
 
 
-    def get_bg(self):
+    def get_bg(self) -> int:
         return select_bg(self.colors)
 
 
-    def get_combined(self):
+    def get_combined(self) -> int:
         return self.colors
 
 
-    def __getitem__(self, x):
+    def __getitem__(self, x: int) -> int:
         return self.colors if self.pattern & (1 << (7 - x)) else select_bg(self.colors)
 
 
@@ -135,14 +135,14 @@ class Row8:
 
 class Tile8x8:
     def __init__(self, fg: int = 0, bg: int = 0):
-        self.patterns: List[Row8] = [Row8(fg, bg) for _ in range(TILE_SIZE)]
+        self.patterns: list[Row8] = [Row8(fg, bg) for _ in range(TILE_SIZE)]
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Tile8x8({' '.join([str(x) for x in self.patterns])})'
 
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 8
 
 
@@ -155,22 +155,22 @@ class Tile8x8:
 
 
     @staticmethod
-    def copy(tile8x8):
+    def copy(tile8x8: Tile8x8) -> Tile8x8:
         self = Tile8x8()
         for i, row in enumerate(tile8x8.patterns):
             self.patterns[i].copy(row)
         return self
 
 
-    def get_pixel(self, x: int, y: int) -> None:
-        self.patterns[y].get_pixel(x)
+    def get_pixel(self, x: int, y: int) -> int:
+        return self.patterns[y].get_pixel(x)
 
 
     def set_pattern(self, x: int, y: int) -> None:
         self.patterns[y].set_pattern(x)
 
 
-    def unset_pattern(self, x, y) -> None:
+    def unset_pattern(self, x: int, y: int) -> None:
         self.patterns[y].unset_pattern(x)
 
 
@@ -201,7 +201,7 @@ class Tile8x8:
 
 
     def mirror_vertically(self) -> None:
-        tmp: List[Row8] = [Row8() for _ in range(TILE_SIZE)]
+        tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
         for y in range(TILE_SIZE):
             tmp[TILE_SIZE - y - 1] = self.patterns[y]
         self.patterns = tmp
@@ -220,14 +220,14 @@ class Tile8x8:
 
 
     def shift_up(self) -> None:
-        tmp: List[Row8] = [Row8() for _ in range(TILE_SIZE)]
+        tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
         for y in range(TILE_SIZE):
             tmp[(y - 1) % TILE_SIZE] = self.patterns[y]
         self.patterns = tmp
 
 
     def shift_down(self) -> None:
-        tmp: List[Row8] = [Row8() for _ in range(TILE_SIZE)]
+        tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
         for y in range(TILE_SIZE):
             tmp[(y + 1) % TILE_SIZE] = self.patterns[y]
         self.patterns = tmp

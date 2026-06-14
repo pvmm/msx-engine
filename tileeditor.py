@@ -1,8 +1,6 @@
 import json
 
 from nicegui import ui, events
-from typing import List, Tuple
-
 from constants import GRID_PIXEL_SIZE
 from common import header, get_text_color, menu_item
 from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, select_fg, select_bg, divide_colors
@@ -19,7 +17,7 @@ DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 toggle_mode_status = OFF
 
 # functions
-async def show_message_dialog(message):
+async def show_message_dialog(message) -> None:
     with ui.dialog() as dialog, ui.card():
         ui.label(message)
         with ui.row():
@@ -27,7 +25,7 @@ async def show_message_dialog(message):
     result = await dialog
 
 
-async def show_confirm_dialog(message):
+async def show_confirm_dialog(message) -> str:
     with ui.dialog() as dialog, ui.card():
         ui.label(message)
         with ui.row():
@@ -45,7 +43,7 @@ class UiPixel(ui.card):
     # ui elements
     inner = None
 
-    def __init__(self, value: bool, combined: int = None, fg: int = None, bg: int = None, scale: int = None, **kwargs):
+    def __init__(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None, scale: int | None = None, **kwargs):
         super().__init__(**kwargs)
         # Just set values before initializing
         self.set_value(value)
@@ -59,7 +57,7 @@ class UiPixel(ui.card):
         self.value = value
 
 
-    def set_colors(self, combined: int = None, fg: int = None, bg: int = None) -> None:
+    def set_colors(self, combined: int | None = None, fg: int | None = None, bg: int | None = None) -> None:
         if combined:
             self.fg, self.bg = divide_colors(combined)
         else:
@@ -71,7 +69,7 @@ class UiPixel(ui.card):
             self.repaint()
 
 
-    def set_scale(self, scale: int = None) -> None:
+    def set_scale(self, scale: int | None = None) -> None:
         if scale:
             self.scale = scale
         else:
@@ -111,7 +109,7 @@ class UiPixel(ui.card):
         )
 
 
-    def build_ui(self):
+    def build_ui(self) -> None:
         with self.tight().style('display: flex; justify-content: center; align-items: center;'):
             self.inner = ui.card().tight().classes('items-center justify-center')
         self.repaint()
@@ -139,7 +137,7 @@ class TileEditor(ui.element):
     eraser = None
     inverter = None
 
-    def __init__(self, parent: ui.element, grid: List[List[int]] = None, fg: int = None, bg: int = None, **kwargs):
+    def __init__(self, parent: ui.element, grid: list[list[int]] = None, fg: int | None = None, bg: int | None = None, **kwargs):
         super().__init__('div', **kwargs) 
         self.parent = parent
 
@@ -163,9 +161,9 @@ class TileEditor(ui.element):
         self.title = f'{width}x{height} Tile'
 
         self.set_pixel_function = self.grid.set_pattern
-        self.pixel_refs: List[List[ui.element]] = []
-        self.bg_color_refs: List[List[ui.element]] = []
-        self.fg_color_refs: List[List[ui.element]] = []
+        self.pixel_refs: list[list[ui.element]] = []
+        self.bg_color_refs: list[list[ui.element]] = []
+        self.fg_color_refs: list[list[ui.element]] = []
 
         self.build_ui()
 
@@ -273,7 +271,7 @@ class TileEditor(ui.element):
                         self.pixel_refs.append(row_refs)
 
 
-    def get_label(self, index):
+    def get_label(self, index) -> str:
         n = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
         return ['', 'F', 'B', 'FB'][n]
 

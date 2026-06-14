@@ -16,27 +16,29 @@ METATILE_STORAGE_HEIGHT = 100
 
 
 class MetatileEditor:
+    """UI for editing a metatile, allowing to modify its properties and tiles."""
     tile_editor = None
 
-    def __init__(self, parent, metatile = None):
+    def __init__(self, parent, metatile: UiMetatile = None):
         self.parent = parent
         self.metatile = metatile
         self.build_ui()
 
 
-    def build_ui(self):
+    def build_ui(self) -> None:
         with self.parent:
             ui.checkbox('Scrollable metatile')
             self.tile_editor = TileEditor(parent=ui.column())
         enable(self.parent, self.metatile != None)
 
 
-    def update(self, metatile):
+    def update(self, metatile: UiMetatile) -> None:
         self.metatile = metatile
         enable(self.parent, self.metatile != None)
 
 
-class Metatile(InteractiveImage):
+class UiMetatile(InteractiveImage):
+    """Represents a metatile in the UI, allowing to display and select/unselect it."""
     def __init__(self, data = None, scale = 5):
         super().__init__()
         self.scale = scale
@@ -52,7 +54,7 @@ class Metatile(InteractiveImage):
         self.reload(grid)
 
 
-    def reload(self, grid):
+    def reload(self, grid) -> None:
         self.grid = grid
         data = grid_to_svg(self.grid, self.scale)
         self.ui = self.set_source(
@@ -61,6 +63,7 @@ class Metatile(InteractiveImage):
 
 
 class StageEditor:
+    """UI for editing stage metatiles, allowing to create and manage metatiles."""
     background_tile_cards = None
     metatile_container = None
     metatile_collection = []
@@ -76,23 +79,27 @@ class StageEditor:
         self.background_tiles = set()
         self.build_ui()
 
-    def on_select_metatile(self, event: GenericEventArguments) -> None:
+
+    def on_select_metatile(self, event: events.GenericEventArguments) -> None:
         if self.selected_metatile_element:
             self.selected_metatile_element.style('border: 1px solid #444;')
         self.selected_metatile_element = event.sender
         self.selected_metatile_element.style('border: 3px solid #444;')
         #self.metatile_editor.update(self.selected_metatile_element)
 
-    def add_metatile(self, bgcolor_index: int) -> Metatile:
+
+    def add_metatile(self, bgcolor_index: int) -> UiMetatile:
         with self.metatile_container:
-            metatile = Metatile(grid_to_svg(Tile8x8(15, bgcolor_index), 5)) \
+            metatile = UiMetatile(grid_to_svg(Tile8x8(15, bgcolor_index), 5)) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
             self.metatile_collection.append(metatile)
             return metatile
 
+
     def on_add_metatile_clicked(self, event: events.ClickEventArguments) -> None:
         # Add ui card with 3 tiles
         self.add_metatile(self.selected_tile_index)
+
 
     def erase_selected_tile(self) -> None:
         self.background_tiles.remove(self.selected_tile_index)
@@ -100,8 +107,10 @@ class StageEditor:
         self.selected_tile_index = None
         self.enable_tile_buttons(False)
 
+
     def on_erase_tile(self, event) -> None:
         self.erase_selected_tile()
+
 
     def build_ui(self) -> None:
         with self.parent as parent:
@@ -146,6 +155,7 @@ class StageEditor:
 
             self.metatile_editor = MetatileEditor(ui.card().classes('w-full'))
 
+
     def set_background_tile_style(self, element: ui.element, color = '#000000') -> None:
         return element.style(
             f'''
@@ -158,6 +168,7 @@ class StageEditor:
             '''
         )
 
+
     def select_background_tile(self, element: ui.element, index: int) -> ui.element:
         if self.selected_tile_card:
             self.selected_tile_card.style('border: 1px solid #444;')
@@ -166,8 +177,10 @@ class StageEditor:
         self.enable_tile_buttons()
         return element
 
+
     def on_select_background_tile(self, e: events.GenericEventArguments, index: int) -> None:
         self.select_background_tile(e.sender, index)
+
 
     def add_background_tile(self, index: int, color: str) -> ui.element:
         pos = len(self.background_tiles)
@@ -182,13 +195,16 @@ class StageEditor:
                     ),
                 index)
 
+
     def enable_tile_buttons(self, status: bool = True) -> None:
         enable(self.erase_background_tile_button, status)
         enable(self.add_metatile_button, status)
 
+
     def on_add_background_tile(self, event, index: int) -> None:
         color = event.sender._props.get('color')
         self.add_background_tile(index, color)
+
 
     def draw_color_dropdown(self, palette) -> None:
         with ui.dropdown_button('select color', auto_close=True):
@@ -199,6 +215,7 @@ class StageEditor:
                         color: {get_text_color(color)};
                     ''') \
                     .props(f'{color=}')
+
 
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run

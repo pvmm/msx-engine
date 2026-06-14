@@ -17,7 +17,7 @@ def header(text: str) -> ui.element:
     return ui.label(text).classes('text-2xl font-semibold')
 
 
-def hex_to_rgb(hex_string: str) -> [int, int, int]:
+def hex_to_rgb(hex_string: str) -> tuple[int, int, int]:
     'Converts HTML #rrggbb to RGB triplet'
     hex_string = hex_string.lstrip('#')
     if len(hex_string) != 6:
@@ -35,7 +35,7 @@ def get_text_color(bg_color: str) -> str:
     return 'black' if luma > 0.5 else 'white'
 
 
-def menu_item(element: ui.element) -> str:
+def menu_item(element: ui.element) -> ui.element:
     'Mickeymouses weird spacing issue of the menu item'
     return element.classes('mx-4')
 
