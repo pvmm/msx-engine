@@ -1,12 +1,22 @@
 # functions
+
 from nicegui import ui
+from nicegui.elements.mixins.disableable_element import DisableableElement
+
 
 def run() -> None:
     # Inject your personal Font Awesome Kit script into the document head
     ui.add_head_html('<script src="https://kit.fontawesome.com/dd0877df2c.js" crossorigin="anonymous"></script>')
 
     # Change tooltip size
-    ui.add_css('.q-tooltip { font-size: 18px; white-space: pre-line; }')
+    ui.add_css('''
+        .q-tooltip {
+            font-size: 18px; white-space: pre-line;
+        }
+        .no-select {
+            user-select: none;
+        }
+        ''')
 
     ui.run(title='NiceGUI Tile Editor') 
     
@@ -38,3 +48,18 @@ def get_text_color(bg_color: str) -> str:
 def menu_item(element: ui.element) -> ui.element:
     'Mickeymouses weird spacing issue of the menu item'
     return element.classes('mx-4')
+
+
+def enable(element: DisableableElement | ui.element, status: bool = True) -> None:
+    """Enable/disable an element for any type of ui.element"""
+    if status:
+        if isinstance(element, DisableableElement):
+            element.enable()
+        else:
+            element._props.pop('disabled')
+    else:
+        if isinstance(element, DisableableElement):
+            element.disable()
+        else:
+            element.props('disabled')
+

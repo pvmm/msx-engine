@@ -44,6 +44,7 @@ class UiPixel(ui.card):
     inner: ui.card
 
     def __init__(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None, scale: int | None = None):
+        super().__init__()
         with self:
             # Just set values before initializing
             self.set_value(value)
@@ -248,8 +249,8 @@ class TileEditor(ui.element):
 
                 ui.separator()
 
-                ui.button(icon='fa-solid fa-copy', on_click=self.copy_to_clipboard).props('color=green').tooltip('copy pattern to clipboard')
-                ui.button(icon='fa-solid fa-trash', on_click=self.confirm_clear).props('color=red').tooltip('erase tile completely')
+                ui.button(icon='fa-solid fa-copy', on_click=self.on_copy_to_clipboard).props('color=green').tooltip('copy pattern to clipboard')
+                ui.button(icon='fa-solid fa-trash', on_click=self.on_clear_tile).props('color=red').tooltip('erase tile completely')
 
 
     def build_grid(self) -> None:
@@ -264,8 +265,8 @@ class TileEditor(ui.element):
                         with ui.row().classes('gap-0'):
                             for x in range(TILE_SIZE):
                                 pixel = UiPixel(False, self.grid[y].get_combined())
-                                pixel.on('mousedown', lambda e, px=x, py=y: self.drag_on_grid(e, px, py))
-                                pixel.on('mouseover', lambda e, px=x, py=y: self.drag_on_grid(e, px, py))
+                                pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                 pixel.on('contextmenu.prevent', lambda: None)
                                 row_refs.append(pixel)
                         self.pixel_refs.append(row_refs)
@@ -411,7 +412,7 @@ class TileEditor(ui.element):
         self.repaint()
 
 
-    async def drag_on_grid(self, event: events.GenericEventArguments, x: int, y:int) -> None:
+    async def on_drag_on_grid(self, event: events.GenericEventArguments, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
         if buttons == 0:
@@ -440,7 +441,7 @@ class TileEditor(ui.element):
         self.repaint()
 
 
-    async def confirm_clear(self) -> None:
+    async def on_clear_tile(self) -> None:
         result = await show_confirm_dialog('Are you sure you want to delete the tile?') \
                 if self.confirm_erasing and self.dirty else 'yes'
         if result == 'yes':
@@ -457,7 +458,7 @@ class TileEditor(ui.element):
         self.grid.set_copy_format(event.value)
 
 
-    def copy_to_clipboard(self, event: events.ClickEventArguments) -> None:
+    def on_copy_to_clipboard(self, event: events.ClickEventArguments) -> None:
         script = f'''navigator.clipboard.writeText("{self.grid}")'''
         ui.run_javascript(script)
 

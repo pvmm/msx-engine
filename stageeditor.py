@@ -48,16 +48,16 @@ class UiMetatile(InteractiveImage):
     grid: Tile8x8
 
     def __init__(self, data: str | Tile8x8 | None = None, scale: int = 5):
-        with self:
-            self.scale = scale
-            if not data:
-                grid = Tile8x8(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
-            elif isinstance(data, Tile8x8):
-                grid = data
-            else:
-                # Convert from json string
-                grid = json.loads(data)
-            self.reload(grid)
+        super().__init__()
+        self.scale = scale
+        if not data:
+            grid = Tile8x8(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
+        elif isinstance(data, Tile8x8):
+            grid = data
+        else:
+            # Convert from json string
+            grid = json.loads(data)
+        self.reload(grid)
 
 
     def reload(self, grid: Tile8x8) -> None:

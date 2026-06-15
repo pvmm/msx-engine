@@ -1,7 +1,7 @@
 from nicegui import ui, events
 from tileeditor import TileEditor
 from stageeditor import UiMetatile
-from common import header, get_text_color
+from common import header, get_text_color, enable
 from v9918 import PALETTE, DEFAULT_FG_COLOR, Tile8x8
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
 
@@ -65,11 +65,12 @@ class Project:
 
     def __init__(self, parent: ui.element) -> None:
         self.parent = parent
+        self.selected_tile = None
         self.build_ui()
         self.initialized = True
 
 
-    async def change_project_type(self, event: events.ValueChangeEventArguments[str]) -> None:
+    async def on_change_project_type(self, event: events.ValueChangeEventArguments[str]) -> None:
         if event.value != self.project_type and self.tiles_changed:
             with ui.dialog() as dialog, ui.card():
                 ui.label('Changing project type will delete extra tiles. Are you sure?')
@@ -82,12 +83,8 @@ class Project:
         if result:
             if self.initialized:
                 self.project_type = event.value
-                if self.project_type != 'static screen':
-                    self.r18_checkbox.enable()
-                    self.scroll_pixels_radio.enable()
-                else:
-                    self.r18_checkbox.disable()
-                    self.scroll_pixels_radio.disable()
+                enable(self.r18_checkbox, self.project_type != 'static screen')
+                enable(self.scroll_pixels_radio, self.project_type != 'static screen')
                 ui.notify(f'Project type changed to {self.project_type}')
             elif isinstance(event.sender, ui.toggle):
                 event.sender.set_value(self.project_type)
@@ -108,13 +105,12 @@ class Project:
 
     def set_105_color_mode(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global FPS_OPTIONS
+        enable(self.second_pattern_checkbox, not event.value)
         if event.value:
             self.fps += 1
-            self.second_pattern_checkbox.disable()
             self.available_tiles //= 2
         else:
             self.fps -= 1
-            self.second_pattern_checkbox.enable()
             self.available_tiles *= 2
         self.second_pattern_checkbox.value = event.value
         self.fps_badge.set_text(FPS_OPTIONS[self.fps])
@@ -144,11 +140,9 @@ class Project:
 
     def force_specific_frame_rate(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global TARGET_OPTIONS
+        enable(self.frame_rate_radio, event.value)
         if event.value:
             self.frame_rate_badge.set_text(self.frame_rate_radio.value)
-            self.frame_rate_radio.enable()
-        else:
-            self.frame_rate_radio.disable()
         self.target = TARGET_OPTIONS[1 if event.value else 0]
         self.frame_rate = self.frame_rate_radio.value
         self.target_badge.set_text(self.target)
@@ -213,18 +207,14 @@ class Project:
 
 
     def enable_tile_buttons(self, status: bool = True) -> None:
-        if status:
-            self.edit_tile_button.enable()
-            self.erase_tile_button.enable()
-        else:
-            self.edit_tile_button.disable()
-            self.erase_tile_button.disable()
+        enable(self.edit_tile_button, status)
+        enable(self.erase_tile_button, status)
 
 
     def select_tile(self, metatile: UiMetatile) -> UiMetatile:
-        if self.selected_tile:
-            self.selected_tile.style('border: 1px solid #444;')
-        self.selected_tile = metatile.style('border: 3px solid #444;')
+        if self.selected_tile and not self.selected_tile is metatile:
+            self.selected_tile.style('border: 1px solid #444; filter: brightness(100%);')
+        self.selected_tile = metatile.style('border: 3px solid #444; filter: brightness(80%);')
         self.enable_tile_buttons(True)
         return self.selected_tile
 
@@ -238,6 +228,7 @@ class Project:
         with self.tiles:
             tooltip = f'color #{bg_color} ({PALETTE[bg_color]})'
             return self.select_tile(UiMetatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
+                    .classes('no-select')
                     .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
 
 
@@ -287,7 +278,7 @@ class Project:
     def build_ui(self) -> None:
         with self.parent:
             toggle = ui.toggle({x:'' for x in PROJECT_TYPES.keys()}, value=self.project_type,
-                    on_change=self.change_project_type)
+                    on_change=self.on_change_project_type)
             for i, key in enumerate(PROJECT_TYPES.keys(), start=1):
                 with ui.teleport(f'#{toggle.html_id} > button:nth-child({i}) .q-btn__content'):
                     ui.icon(PROJECT_TYPES[key]['icon'], size='xl').tooltip(PROJECT_TYPES[key]['tooltip'])
