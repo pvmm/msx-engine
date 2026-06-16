@@ -181,8 +181,8 @@ class TileEditor(ui.element):
                             text = 'display dialog when erasing pattern?'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
                                       on_change=self.toggle_confirm_erasing)).tooltip(text)
-                            text = 'hide background colour when pixel is visible and foreground colour when it\'s not?'
-                            menu_item(ui.switch('Display resulting pixel only', value=self.background_occlusion,
+                            text = 'hide background pixel when foreground pixel is visible?'
+                            menu_item(ui.switch('Activate background occlusion', value=self.background_occlusion,
                                       on_change=self.toggle_background_occlusion)).tooltip(text)
                 if self.title:
                     header(self.title)
