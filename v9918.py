@@ -77,6 +77,11 @@ class Row8:
         return 8
 
 
+    def __getitem__(self, x: int) -> int:
+        """Return the foreground color index if the pixel is active, otherwise return the background color index."""
+        return self.colors if self.pattern & (1 << (7 - x)) else select_bg(self.colors)
+
+
     def copy(self, row8: Row8) -> None:
         self.pattern = row8.pattern
         self.colors = row8.colors
@@ -116,10 +121,6 @@ class Row8:
         return self.colors
 
 
-    def __getitem__(self, x: int) -> int:
-        return self.colors if self.pattern & (1 << (7 - x)) else select_bg(self.colors)
-
-
     def mirror(self) -> None:
         '''mirror pattern inplace'''
         self.pattern = mirror(self.pattern)
@@ -134,6 +135,16 @@ class Row8:
 
 
 class Tile8x8:
+    patterns: list[Row8]
+
+    @staticmethod
+    def copy(tile8x8: Tile8x8) -> Tile8x8:
+        self = Tile8x8()
+        for i, row in enumerate(tile8x8.patterns):
+            self.patterns[i].copy(row)
+        return self
+
+
     def __init__(self, fg: int = 0, bg: int = 0):
         self.patterns: list[Row8] = [Row8(fg, bg) for _ in range(TILE_SIZE)]
 
@@ -152,14 +163,6 @@ class Tile8x8:
 
     def __setitem__(self, index: int, value: Row8) -> None:
         self.patterns[index] = value
-
-
-    @staticmethod
-    def copy(tile8x8: Tile8x8) -> Tile8x8:
-        self = Tile8x8()
-        for i, row in enumerate(tile8x8.patterns):
-            self.patterns[i].copy(row)
-        return self
 
 
     def get_pixel(self, x: int, y: int) -> int:
