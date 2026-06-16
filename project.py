@@ -11,18 +11,22 @@ PROJECT_TYPES = {
         'static screen': {
             'icon': 'check_box_outline_blank',
             'tooltip': '''screen doesn't move''',
+            'scrolling': False,
         },
         'automatic L2R scrolling' : {
             'icon': 'trending_flat',
             'tooltip': '''screen always moves L2R,\nlike a SHMUP game''',
+            'scrolling': True,
         },
         'scroll L2R when player moves': {
             'icon': 'start',
             'tooltip': '''screen scrolls when player moves towards the\nright edge of the screen, like a beat'em up''',
+            'scrolling': True,
         },
         'free side scrolling': {
             'icon': 'swap_horiz',
             'tooltip': '''screen scrolls left or right when player moves towards the\nleft or right edge of the screen, like Atari 2600 Defender''',
+            'scrolling': True,
         }
 }
 TARGET_OPTIONS = ['MSX1', 'MSX2 or above']
@@ -45,7 +49,7 @@ class Project:
     _105_color_mode: bool = False
     fps: int = FPS_OPTIONS.index('frame rate')
     scroll_pixels: int = 8
-    project_type: str = list(PROJECT_TYPES.keys())[0]
+    project_type: str = 'static screen'
     project_changed: bool = True
     tiles_changed: bool = False
     selected_tile_index: int | None = None
@@ -62,6 +66,7 @@ class Project:
     scroll_pixels_radio: ui.radio
     tiles: ui.element
     selected_tile: UiMetatile | None
+
 
     def __init__(self, parent: ui.element) -> None:
         self.parent = parent
@@ -81,13 +86,11 @@ class Project:
         else:
             result = True
         if result:
-            if self.initialized:
-                self.project_type = event.value
-                enable(self.r18_checkbox, self.project_type != 'static screen')
-                enable(self.scroll_pixels_radio, self.project_type != 'static screen')
-                ui.notify(f'Project type changed to {self.project_type}')
-            elif isinstance(event.sender, ui.toggle):
-                event.sender.set_value(self.project_type)
+            self.project_type = event.value
+            enabled = PROJECT_TYPES[self.project_type]['scrolling']
+            enable(self.r18_checkbox, enabled)
+            enable(self.scroll_pixels_radio, enabled)
+            ui.notify(f'Project type changed to {self.project_type}')
 
 
     def reserve_second_pattern_table(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
@@ -176,6 +179,7 @@ class Project:
 
 
     def set_r18(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+        """Use the V9938 VDP register R#18 to scroll horizontally."""
         global TARGET_OPTIONS
         if event.value:
             self.r18_hardware_scroll = event.value
@@ -277,7 +281,7 @@ class Project:
 
     def build_ui(self) -> None:
         with self.parent:
-            toggle = ui.toggle({x:'' for x in PROJECT_TYPES.keys()}, value=self.project_type,
+            toggle = ui.toggle({title:'' for title in PROJECT_TYPES.keys()}, value=self.project_type,
                     on_change=self.on_change_project_type)
             for i, key in enumerate(PROJECT_TYPES.keys(), start=1):
                 with ui.teleport(f'#{toggle.html_id} > button:nth-child({i}) .q-btn__content'):
