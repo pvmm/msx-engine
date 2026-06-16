@@ -7,7 +7,16 @@ from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETT
 
 # constants
 GRID_FG_LAYER_SIZE = 16        # size of foreground color pixel
-COPY_TO_CLIPBOARD_FORMATS = ['index', 'rgb']
+COPY_TO_CLIPBOARD_FORMATS = {
+    'index' : {
+        'icon': 'fa-solid fa-table-cells-large',
+        'tooltip': 'export tile index for the MSX'
+    },
+    'rgb' : {
+        'icon': 'fa-solid fa-palette',
+        'tooltip': 'export tile as RGB values'
+    }
+}
 
 # toggle mode: switches between paintbrush and eraser automatically by context
 TOGGLE_MODE = False
@@ -175,9 +184,16 @@ class TileEditor(ui.element):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
                         with ui.column():
-                            with ui.column().classes('items-center'):
+                            with ui.column().classes('items-center w-full'):
                                 menu_item(ui.label('Copy to clipboard as')).classes('mt-4')
-                                self.clipboard_toggle = ui.toggle(COPY_TO_CLIPBOARD_FORMATS, value='index', on_change=self.on_set_copy_format)
+                                self.clipboard_toggle = ui.toggle({title:'' for title in COPY_TO_CLIPBOARD_FORMATS.keys()},
+                                        value='index', on_change=self.on_set_copy_format)
+                                for i, key in enumerate(COPY_TO_CLIPBOARD_FORMATS.keys(), start=1):
+                                    with ui.teleport(f'#{self.clipboard_toggle.html_id} > button:nth-child({i}) .q-btn__content ') as div:
+                                        with ui.element('div').tooltip(COPY_TO_CLIPBOARD_FORMATS[key]['tooltip']).classes('flex items-center gap-2'):
+                                            ui.icon(COPY_TO_CLIPBOARD_FORMATS[key]['icon'])
+                                            ui.label(key)
+
                             text = 'display dialog when erasing pattern?'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
                                       on_change=self.toggle_confirm_erasing)).tooltip(text)

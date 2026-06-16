@@ -200,7 +200,7 @@ class StageEditor:
         if pos == len(self.background_tiles): return None
         with self.background_tile_cards:
             card = ui.card().on('mousedown', lambda e, i=index: self.on_select_background_tile(e, i))
-            card.tooltip(f'color #{index} ({color})').move(target_index = pos)
+            card.tooltip(f'color #{index} ({color})').move(target_index=pos)
             self.set_background_tile_style(card, color)
             self.select_background_tile(card, index)
         return card
