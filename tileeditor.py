@@ -67,7 +67,7 @@ class UiPixel(ui.card):
             if bg:
                 self.bg = bg
         if self.initialized:
-            self.repaint()
+            self.repaint(False)
 
 
     def set_scale(self, scale: int | None = None) -> None:
@@ -76,34 +76,34 @@ class UiPixel(ui.card):
         else:
             self.scale = GRID_PIXEL_SIZE
         if self.initialized:
-            self.repaint()
+            self.repaint(False)
 
 
-    def repaint(self) -> None:
-        self.repaint_fg()
-        self.repaint_bg()
+    def set(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None) -> None:
+        self.set_value(value)
+        self.set_colors(combined, fg, bg)
 
 
-    def repaint_fg(self) -> None:
-        self.inner.style(
-            f'''
-            width: {self.scale - 8}px;
-            height: {self.scale - 8}px;
-            background-color: {PALETTE[self.fg] if self.value else PALETTE[self.bg]};
-            border: 1px solid {PALETTE[self.fg]};
-            border-radius: 0;
-            cursor: pointer;
-            '''
-        )
-
-
-    def repaint_bg(self) -> None:
+    def repaint(self, background_occlusion: bool) -> None:
+        # if pixel is active, use foreground color, otherwise use background color
+        index = self.fg if self.value else self.bg
         self.style(
             f'''
             width: {self.scale}px;
             height: {self.scale}px;
-            background-color: {PALETTE[self.bg]};
+            background-color: {PALETTE[index if background_occlusion else self.bg]};
             border: 1px solid #444;
+            border-radius: 0;
+            cursor: pointer;
+            '''
+        )
+        self.inner.style(
+            f'''
+            width: {self.scale - 8}px;
+            height: {self.scale - 8}px;
+            background-color: {PALETTE[index]};
+            border: 1px solid {PALETTE[self.fg]};
+            visibility: {'hidden' if background_occlusion else 'visible'};
             border-radius: 0;
             cursor: pointer;
             '''
@@ -113,7 +113,7 @@ class UiPixel(ui.card):
     def build_ui(self) -> None:
         with self.tight().style('display: flex; justify-content: center; align-items: center;'):
             self.inner = ui.card().tight().classes('items-center justify-center')
-        self.repaint()
+        self.repaint(False)
 
 
 class TileEditor(ui.element):
@@ -311,6 +311,7 @@ class TileEditor(ui.element):
     def toggle_background_occlusion(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         if event.value is not None:
             self.background_occlusion = event.value
+            self.repaint()
 
 
     def select_tool(self, sender: ui.element) -> None:
@@ -348,8 +349,10 @@ class TileEditor(ui.element):
     def repaint(self) -> None:
         for y in range(TILE_SIZE):
             for x in range(TILE_SIZE):
-                self.pixel_refs[y][x].set_colors(self.grid[y][x])
-                self.pixel_refs[y][x].repaint()
+                value = bool(self.grid[y].get_pixel(x))
+                combined = self.grid[y].get_combined()
+                self.pixel_refs[y][x].set(value, combined=combined)
+                self.pixel_refs[y][x].repaint(self.background_occlusion)
 
 
     def unpaint(self, x: int, y: int) -> None:
@@ -380,6 +383,7 @@ class TileEditor(ui.element):
                 self.grid[y].set_fg(self.current_fg_color)
                 self.repaint()
             else:
+                self.pixel_refs[y][x].set_value(True)
                 self.grid[y].set_pattern(x)
                 self.grid[y].set_fg(self.current_fg_color)
                 self.repaint()
