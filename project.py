@@ -140,8 +140,8 @@ class Project:
 
     def force_specific_frame_rate(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         global TARGET_OPTIONS
-        enable(self.frame_rate_radio, event.value)
-        if event.value:
+        if not event.value is None:
+            enable(self.frame_rate_radio, event.value)
             self.frame_rate_badge.set_text(self.frame_rate_radio.value)
         self.target = TARGET_OPTIONS[1 if event.value else 0]
         self.frame_rate = self.frame_rate_radio.value
