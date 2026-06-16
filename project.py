@@ -87,7 +87,7 @@ class Project:
             result = True
         if result:
             self.project_type = event.value
-            enabled = PROJECT_TYPES[self.project_type]['scrolling']
+            enabled = bool(PROJECT_TYPES[self.project_type]['scrolling'])
             enable(self.r18_checkbox, enabled)
             enable(self.scroll_pixels_radio, enabled)
             ui.notify(f'Project type changed to {self.project_type}')
@@ -210,16 +210,11 @@ class Project:
         )
 
 
-    def enable_tile_buttons(self, status: bool = True) -> None:
-        enable(self.edit_tile_button, status)
-        enable(self.erase_tile_button, status)
-
-
     def select_tile(self, metatile: UiMetatile) -> UiMetatile:
         if self.selected_tile and not self.selected_tile is metatile:
             self.selected_tile.style('border: 1px solid #444; filter: brightness(100%);')
         self.selected_tile = metatile.style('border: 3px solid #444; filter: brightness(80%);')
-        self.enable_tile_buttons(True)
+        enable(self.tile_buttons, True)
         return self.selected_tile
 
 
@@ -238,7 +233,7 @@ class Project:
 
     def on_add_tile(self, event: events.ClickEventArguments, index: int) -> None:
         self.add_tile(index)
-        self.enable_tile_buttons()
+        enable(self.tile_buttons, True)
 
 
     def draw_color_dropdown(self, palette: list[str]) -> None:
@@ -271,7 +266,7 @@ class Project:
         if self.selected_tile:
             self.tiles.remove(tile)
             self.selected_tile = None
-        self.enable_tile_buttons(False)
+        enable(self.tile_buttons, False)
 
 
     def on_erase_tile(self, event: events.ClickEventArguments) -> None:
@@ -285,7 +280,7 @@ class Project:
                     on_change=self.on_change_project_type)
             for i, key in enumerate(PROJECT_TYPES.keys(), start=1):
                 with ui.teleport(f'#{toggle.html_id} > button:nth-child({i}) .q-btn__content'):
-                    ui.icon(PROJECT_TYPES[key]['icon'], size='xl').tooltip(PROJECT_TYPES[key]['tooltip'])
+                    ui.icon(str(PROJECT_TYPES[key]['icon']), size='xl').tooltip(str(PROJECT_TYPES[key]['tooltip']))
             with ui.row().classes('items-center gap-2 flex-nowrap'):
                 ui.label('Project type: ')
                 ui.label().bind_text_from(toggle, 'value')
@@ -357,16 +352,14 @@ class Project:
                     ui.label('Create tile by background color').classes('whitespace-nowrap')
                     self.draw_color_dropdown(PALETTE)
 
-                with ui.row().classes('items-center flex-nowrap'):
+                with ui.row().classes('items-center flex-nowrap') as self.tile_buttons:
                     text = 'Edit selected tile'
-                    self.edit_tile_button = \
-                            ui.button(icon='fa-solid fa-edit',
-                            on_click=lambda e: self.on_edit_tile_clicked(e)).tooltip(text).props('disabled')
+                    ui.button(icon='fa-solid fa-edit',
+                    on_click=lambda e: self.on_edit_tile_clicked(e)).tooltip(text)
 
                     text = 'Erase selected tile'
-                    self.erase_tile_button = \
-                            ui.button(icon='fa-solid fa-minus',
-                            on_click=self.on_erase_tile).tooltip(text).props('disabled')
+                    ui.button(icon='fa-solid fa-minus',
+                    on_click=self.on_erase_tile).tooltip(text)
 
                     # background colour container
                     with ui.row().classes('items-center gap-2 px-2 min-w-[800px]') as self.tiles:
@@ -376,6 +369,8 @@ class Project:
                                 overflow-y: auto;'''
                         )
                         ...
+
+                    enable(self.tile_buttons, not self.selected_tile is None)
 
 
 """
