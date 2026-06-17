@@ -7,7 +7,7 @@ from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile8x8, grid_to_
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
-from common import header, get_text_color
+from common import header, get_text_color, enable
 
 
 TILE_PIXEL_SIZE = 12
@@ -194,7 +194,7 @@ class StageEditor(ui.row):
 
 
     def enable_tile_buttons(self, status: bool = True) -> None:
-        enable(self.add_metatile_button, stastus)
+        enable(self.add_metatile_button, status)
 
 
     def on_add_background_tile(self, event: events.ClickEventArguments, index: int) -> None:
