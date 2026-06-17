@@ -1,7 +1,7 @@
 import json
 
 from nicegui import ui, events
-from constants import GRID_PIXEL_SIZE
+from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
 from common import header, get_text_color, menu_item
 from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors
 
@@ -79,12 +79,12 @@ class UiPixel(ui.card):
             self.repaint(False)
 
 
-    def set_scale(self, scale: int | None = None) -> None:
+    def set_scale(self, scale: int | None = None, repaint: bool = False) -> None:
         if scale:
             self.scale = scale
         else:
             self.scale = GRID_PIXEL_SIZE
-        if self.initialized:
+        if self.initialized and repaint:
             self.repaint(False)
 
 
@@ -96,20 +96,23 @@ class UiPixel(ui.card):
     def repaint(self, background_occlusion: bool) -> None:
         # if pixel is active, use foreground color, otherwise use background color
         index = self.fg if self.value else self.bg
+        # grid gets poluted when scale is too small
+        background_occlusion = self.scale < 8 or background_occlusion
         self.style(
             f'''
+            box-shadow: none;
             width: {self.scale}px;
             height: {self.scale}px;
             background-color: {PALETTE[index if background_occlusion else self.bg]};
-            border: 1px solid #444;
+            border: 0px solid #444;
             border-radius: 0;
             cursor: pointer;
             '''
         )
         self.inner.style(
             f'''
-            width: {self.scale - 8}px;
-            height: {self.scale - 8}px;
+            width: {2/3 * self.scale}px;
+            height: {2/3 * self.scale}px;
             background-color: {PALETTE[index]};
             border: 1px solid {PALETTE[self.fg]};
             visibility: {'hidden' if background_occlusion else 'visible'};
@@ -273,19 +276,33 @@ class TileEditor(ui.element):
         with ui.column().classes('gap-1'):
             with ui.row().classes('gap-1'):
 
-                with ui.column().classes('gap-0'):
+                with ui.column():
                     ui.label('Grid').classes('text-lg font-semibold')
-                    for y in range(TILE_SIZE):
-                        row_refs: list[UiPixel] = []
+                    with ui.column().classes('gap-0 min-w-[250px] items-center').style('height: 250px;'):
+                        ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
+                                .on('update:model-value', lambda e: self.on_update_scale_slider(e),
+                                    leading_events=False, throttle=0)
+                        for y in range(TILE_SIZE):
+                            row_refs: list[UiPixel] = []
+                            with ui.row().classes('gap-0'):
+                                for x in range(TILE_SIZE):
+                                    pixel = UiPixel(False, self.grid[y].get_combined())
+                                    pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                    pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                    pixel.on('contextmenu.prevent', lambda: None)
+                                    row_refs.append(pixel)
+                            self.pixel_refs.append(row_refs)
 
-                        with ui.row().classes('gap-0'):
-                            for x in range(TILE_SIZE):
-                                pixel = UiPixel(False, self.grid[y].get_combined())
-                                pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                pixel.on('contextmenu.prevent', lambda: None)
-                                row_refs.append(pixel)
-                        self.pixel_refs.append(row_refs)
+
+    def set_scale(self, value: int) -> None:
+        for y in range(TILE_SIZE):
+            for x in range(TILE_SIZE):
+                self.pixel_refs[y][x].set_scale(value)
+        self.repaint()
+
+
+    def on_update_scale_slider(self, e: events.GenericEventArguments) -> None:
+        self.set_scale(e.args)
 
 
     def get_label(self, index: int) -> str:
