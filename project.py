@@ -37,6 +37,7 @@ FPS_OPTIONS = ['frame rate', 'half the frame rate', 'quarter the frame rate']
 
 class Project:
     # settings
+    background_tiles: list[UiMetatile]
     target = TARGET_OPTIONS[0]
     available_tiles: int = 256
     scrolling_tiles: int = available_tiles
@@ -52,7 +53,6 @@ class Project:
     project_type: str = 'static screen'
     project_changed: bool = True
     tiles_changed: bool = False
-    selected_tile_index: int | None = None
     initialized = False
 
     # ui elements
@@ -64,12 +64,13 @@ class Project:
     second_pattern_checkbox: ui.checkbox
     r18_checkbox: ui.checkbox
     scroll_pixels_radio: ui.radio
-    tiles: ui.element
+    tiles_row: ui.row
     selected_tile: UiMetatile | None
 
 
-    def __init__(self, parent: ui.element) -> None:
+    def __init__(self, parent: ui.element, background_tiles: list[UiMetatile]) -> None:
         self.parent = parent
+        self.background_tiles = background_tiles
         self.selected_tile = None
         self.build_ui()
         self.initialized = True
@@ -223,12 +224,14 @@ class Project:
             self.select_tile(event.sender)
 
 
-    def add_tile(self, bg_color: int) -> UiMetatile:
-        with self.tiles:
+    def add_tile(self, bg_color: int) -> None:
+        with self.tiles_row:
             tooltip = f'color #{bg_color} ({PALETTE[bg_color]})'
-            return self.select_tile(UiMetatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
-                    .classes('no-select')
-                    .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
+            self.background_tiles.append(
+                self.select_tile(UiMetatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
+                        .classes('no-select')
+                        .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
+            )
 
 
     def on_add_tile(self, event: events.ClickEventArguments, index: int) -> None:
@@ -362,8 +365,8 @@ class Project:
                     on_click=self.on_erase_tile).tooltip(text)
 
                     # background colour container
-                    with ui.row().classes('items-center gap-2 px-2 min-w-[800px]') as self.tiles:
-                        self.tiles.style(
+                    with ui.row().classes('items-center gap-2 px-2 min-w-[800px]') as self.tiles_row:
+                        self.tiles_row.style(
                             f'''background-color: {CONTAINER_COLOR};
                                 height: {TILE_STORAGE_HEIGHT}px;
                                 overflow-y: auto;'''
@@ -384,6 +387,7 @@ class Project:
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    Project(ui.column().classes('w-full min-h-screen p-0 m-0'))
+    alist: list[UiMetatile] = []
+    Project(ui.column().classes('w-full min-h-screen p-0 m-0'), alist)
     from common import run
     run()
