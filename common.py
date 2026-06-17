@@ -52,14 +52,17 @@ def menu_item(element: ui.element) -> ui.element:
 
 def enable(element: DisableableElement | ui.element, status: bool = True) -> None:
     """Enable/disable an element for any type of ui.element"""
-    if status:
-        if isinstance(element, DisableableElement):
+    if isinstance(element, DisableableElement):
+        if status:
             element.enable()
         else:
-            element._props.pop('disabled')
-    else:
-        if isinstance(element, DisableableElement):
             element.disable()
+    else:
+        for slot in element.slots:
+            for child in element.default_slot.children:
+                enable(child, status)
+        if status:
+            element._props.pop('disabled')
         else:
             element.props('disabled')
 
