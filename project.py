@@ -267,7 +267,7 @@ class Project:
 
     def erase_tile(self, tile: UiMetatile) -> None:
         if self.selected_tile:
-            self.tiles.remove(tile)
+            self.selected_tile.delete()
             self.selected_tile = None
         enable(self.tile_buttons, False)
 
