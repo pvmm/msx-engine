@@ -73,7 +73,6 @@ class StageEditor(ui.row):
     metatiles_row: ui.row
     # metatile_collection: list[UiMetatile]
     add_metatile_button: ui.button
-    erase_background_tile_button: ui.button
     selected_metatile: UiMetatile | None
     selected_metatile_index: int | None
     metatile_editor: MetatileEditor
@@ -147,11 +146,6 @@ class StageEditor(ui.row):
                         )
                         ui.space()
 
-                    text = 'Erase selected background tile'
-                    self.erase_background_tile_button = \
-                            ui.button(icon='fa-solid fa-minus',
-                            on_click=self.on_erase_tile).tooltip(text).props('disabled')
-
                     text = 'Create metafile from selected background tile'
                     self.add_metatile_button = \
                             ui.button(icon='fa-solid fa-angle-down',
@@ -200,12 +194,7 @@ class StageEditor(ui.row):
 
 
     def enable_tile_buttons(self, status: bool = True) -> None:
-        if status:
-            self.erase_background_tile_button.props('enabled')
-            self.add_metatile_button.props('enabled')
-        else:
-            self.erase_background_tile_button.props('disabled')
-            self.add_metatile_button.props('disabled')
+        enable(self.add_metatile_button, stastus)
 
 
     def on_add_background_tile(self, event: events.ClickEventArguments, index: int) -> None:

@@ -134,9 +134,9 @@ class TileEditor(ui.element):
     # combined brush
     dragging: bool = False
     dragging_on_pixel: bool = False
-    # display dialog when erasing pattern?
+    # display confirmation dialog when erasing pattern
     confirm_erasing: bool = True
-    # hide background colour when pixel is visible and foreground colour when it's not?
+    # hide background colour when pixel is visible and foreground colour when it's not
     background_occlusion: bool = False
     # data has changed and need saving?
     dirty: bool = False
@@ -194,10 +194,10 @@ class TileEditor(ui.element):
                                             ui.icon(COPY_TO_CLIPBOARD_FORMATS[key]['icon'])
                                             ui.label(key)
 
-                            text = 'display dialog when erasing pattern?'
+                            text = 'display confirmation dialog before erasing the tile'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
                                       on_change=self.toggle_confirm_erasing)).tooltip(text)
-                            text = 'hide background pixel when foreground pixel is visible?'
+                            text = 'hide background pixel when foreground pixel is visible'
                             menu_item(ui.switch('Activate background occlusion', value=self.background_occlusion,
                                       on_change=self.toggle_background_occlusion)).tooltip(text)
                 if self.title:

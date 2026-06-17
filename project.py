@@ -349,10 +349,10 @@ class Project:
                         self.scroll_pixels_radio = ui.radio([1, 2, 4, 8], value=8,
                                 on_change=lambda e: self.set_scroll_in_pixels(e)).props('inline').disable()
 
-                header('Static tiles')
+                header('Common tiles')
 
                 with ui.row().classes('items-center flex-nowrap'):
-                    ui.label('Create tile by background color').classes('whitespace-nowrap')
+                    ui.label('Create tile from background color').classes('whitespace-nowrap')
                     self.draw_color_dropdown(PALETTE)
 
                 with ui.row().classes('items-center flex-nowrap') as self.tile_buttons:
