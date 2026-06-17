@@ -147,7 +147,7 @@ class TileEditor(ui.element):
     eraser: ui.button
     inverter: ui.button
 
-    def __init__(self, parent: ui.element, grid: object | None = None, fg: int | None = None, bg: int | None = None):
+    def __init__(self, parent: ui.element, grid: Tile8x8 | object | None = None, fg: int | None = None, bg: int | None = None):
         super().__init__('div')
         self.parent = parent
 

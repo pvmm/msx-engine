@@ -66,53 +66,61 @@ class UiMetatile(InteractiveImage):
         self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))
 
 
-class StageEditor:
+class StageEditor(ui.row):
     """UI for editing stage metatiles, allowing to create and manage metatiles."""
-    background_tiles: set[int]
-    background_tile_cards: ui.row
-    metatile_container: ui.row
-    metatile_collection: list[UiMetatile]
+    project_tiles: list[UiMetatile]
+    project_tiles_row: ui.row
+    metatiles_row: ui.row
+    # metatile_collection: list[UiMetatile]
     add_metatile_button: ui.button
     erase_background_tile_button: ui.button
-    selected_tile_card: ui.card
-    selected_tile_index: int | None
-    selected_metatile_element: ui.element | None
+    selected_metatile: UiMetatile | None
+    selected_metatile_index: int | None
     metatile_editor: MetatileEditor
     palette: list[str] = PALETTE
 
-    def __init__(self, parent: ui.element):
+    def __init__(self, parent: ui.element, background_tiles: list[UiMetatile]):
+        super().__init__()
         self.parent = parent
-        self.background_tiles = set()
+        self.project_tiles = background_tiles
         self.build_ui()
 
 
+    def update_tiles(self) -> None:
+        print('Updating stage editor tiles...', len(self.project_tiles))
+        self.project_tiles_row.clear()
+        with self.project_tiles_row:
+            for metatile in self.project_tiles:
+                UiMetatile(metatile.grid)
+        print('done!')
+
+
     def on_select_metatile(self, event: events.GenericEventArguments) -> None:
-        if self.selected_metatile_element:
-            self.selected_metatile_element.style('border: 1px solid #444;')
-        self.selected_metatile_element = event.sender
-        self.selected_metatile_element.style('border: 3px solid #444;')
-        #self.metatile_editor.update(self.selected_metatile_element)
+        if self.selected_metatile:
+            self.selected_metatile.style('border: 1px solid #444;')
+        if isinstance(event.sender, UiMetatile):
+            self.selected_metatile = event.sender
+            self.selected_metatile.style('border: 3px solid #444;')
 
 
     def add_metatile(self, bgcolor_index: int) -> UiMetatile:
-        with self.metatile_container:
+        with self.metatiles_row:
             metatile = UiMetatile(grid_to_svg(Tile8x8(15, bgcolor_index), 5)) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
-            self.metatile_collection.append(metatile)
             return metatile
 
 
     def on_add_metatile_clicked(self, event: events.ClickEventArguments) -> None:
         # Add ui card with 3 tiles
-        if self.selected_tile_index:
-            self.add_metatile(self.selected_tile_index)
+        if self.selected_metatile_index:
+            self.add_metatile(self.selected_metatile_index)
 
 
     def erase_selected_tile(self) -> None:
-        if self.selected_tile_index:
-            self.background_tiles.remove(self.selected_tile_index)
-        if self.selected_tile_card:
-            self.selected_tile_card.delete()
+        if self.selected_metatile_index:
+            self.project_tiles.pop(self.selected_metatile_index)
+        if self.selected_metatile:
+            self.selected_metatile.delete()
         self.selected_tile_index = None
         self.enable_tile_buttons(False)
 
@@ -124,18 +132,15 @@ class StageEditor:
     def build_ui(self) -> None:
         with self.parent as parent:
             parent.classes('w-full')
-            header('Stage metatile collection')
+            header('Stage metatile editor')
 
-            header('Background tiles')
+            header('Project tiles')
 
             with ui.row().classes('gap-8 w-full'):
                 with ui.row().classes('items-center flex-nowrap'):
-                    ui.label('Add background tile by color').classes('whitespace-nowrap')
-                    self.draw_color_dropdown(self.palette)
-
                     # background colour container
-                    with ui.row().classes('items-center gap-2 px-2 min-w-[400px]') as self.background_tile_cards:
-                        self.background_tile_cards.style(
+                    with ui.row().classes('items-start gap-2 px-2 pt-2 w-full') as self.project_tiles_row:
+                        self.project_tiles_row.style(
                             f'''background-color: {CONTAINER_COLOR};
                                 height: {TILE_STORAGE_HEIGHT}px;
                                 overflow-y: auto;'''
@@ -155,8 +160,8 @@ class StageEditor:
             header('Available metatiles')
 
             # metatile container
-            with ui.row().classes('items-start gap-2 px-2 pt-2 w-full') as self.metatile_container:
-                self.metatile_container.style(
+            with ui.row().classes('items-start gap-2 px-2 pt-2 w-full') as self.metatiles_row:
+                self.metatiles_row.style(
                         f'''background-color: {CONTAINER_COLOR};
                         height: {METATILE_STORAGE_HEIGHT}px;
                         overflow-y: auto;''')
@@ -178,32 +183,20 @@ class StageEditor:
         )
 
 
-    def select_background_tile(self, card: ui.card, index: int) -> ui.card:
-        # unselect previous tile
-        if self.selected_tile_card:
-            self.selected_tile_card.style('border: 1px solid #444;')
-        # select new tile
-        self.selected_tile_card = card.style('border: 3px solid #444;')
-        self.selected_tile_index = index
-        self.enable_tile_buttons()
-        return card
+    # def select_background_tile(self, card: ui.card, index: int) -> ui.card:
+    #     # unselect previous tile
+    #     if self.selected_metatile:
+    #         self.selected_metatile.style('border: 1px solid #444;')
+    #     # select new tile
+    #     self.selected_metatile = card.style('border: 3px solid #444;')
+    #     self.selected_metatile_index = index
+    #     self.enable_tile_buttons()
+    #     return card
 
 
-    def on_select_background_tile(self, event: events.GenericEventArguments, index: int) -> None:
-        if isinstance(event.sender, ui.card):
-            self.select_background_tile(event.sender, index)
-
-
-    def add_background_tile(self, index: int, color: str) -> ui.element | None:
-        pos = len(self.background_tiles)
-        self.background_tiles.add(index)
-        if pos == len(self.background_tiles): return None
-        with self.background_tile_cards:
-            card = ui.card().on('mousedown', lambda e, i=index: self.on_select_background_tile(e, i))
-            card.tooltip(f'color #{index} ({color})').move(target_index=pos)
-            self.set_background_tile_style(card, color)
-            self.select_background_tile(card, index)
-        return card
+    # def on_select_background_tile(self, event: events.GenericEventArguments, index: int) -> None:
+    #     if isinstance(event.sender, ui.card):
+    #         self.select_background_tile(event.sender, index)
 
 
     def enable_tile_buttons(self, status: bool = True) -> None:
@@ -218,22 +211,12 @@ class StageEditor:
     def on_add_background_tile(self, event: events.ClickEventArguments, index: int) -> None:
         color: str = self.palette[index]
         # color: str = event.sender._props.get('color')
-        self.add_background_tile(index, color)
-
-
-    def draw_color_dropdown(self, palette: list[str]) -> None:
-        with ui.dropdown_button('select color', auto_close=True):
-            for index, color in enumerate(palette[1:], start=1):
-                ui.item(f'color {index}', on_click=lambda e, i=index: self.on_add_background_tile(e, i)) \
-                    .style(f'''
-                        background-color: {color};
-                        color: {get_text_color(color)};
-                    ''') \
-                    .props(f'{color=}')
+        # self.add_background_tile(index, color)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run
     with ui.row().classes('w-full'):
-        StageEditor(ui.column().classes('w-full min-h-screen p-0 m-0'))
+        alist: list[UiMetatile] = []
+        StageEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), alist)
     run()
