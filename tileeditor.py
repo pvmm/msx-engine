@@ -235,7 +235,7 @@ class TileEditor(ui.element):
                 text = '''color brush
                     left click: set foreground colour in the same line to the selected foreground colour
                     right click: set background colour in the same line to the selected background colour'''
-                self.colorbrush = ui.button(icon='fa-solid fa-palette', on_click=self.on_toggle_tool).tooltip(text)
+                self.colorbrush = ui.button(icon='fa-solid fa-brush', on_click=self.on_toggle_tool).tooltip(text)
 
                 text = '''eraser
                     left click: unset pixel'''
@@ -244,7 +244,7 @@ class TileEditor(ui.element):
 
                 text = '''inverter
                     switch foreground and background colours and invert pattern in a single line (non destructable)'''
-                self.inverter = ui.button(icon='fa-solid fa-plus-minus', on_click=self.on_toggle_tool).tooltip(text)
+                self.inverter = ui.button(icon='fa-solid fa-wand-magic-sparkles', on_click=self.on_toggle_tool).tooltip(text)
 
                 ui.separator()
 
