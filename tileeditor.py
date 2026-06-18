@@ -298,10 +298,10 @@ class TileEditor(ui.element):
 
                 ui.separator()
 
-                text = 'shift tile left'
+                text = 'shift tile pattern left'
                 ui.button(icon='fa-solid fa-arrow-left fa-lg', on_click=self.shift_left).props('color=black').tooltip(text)
 
-                text = 'shift tile right'
+                text = 'shift tile pattern right'
                 ui.button(icon='fa-solid fa-arrow-right fa-lg', on_click=self.shift_right).props('color=black').tooltip(text)
 
                 text = 'shift tile up'
@@ -336,7 +336,7 @@ class TileEditor(ui.element):
                             row_refs: list[UiPixel] = []
                             with ui.row().classes('gap-0'):
                                 for x in range(len(self.grid[0])):
-                                    pixel = UiPixel(False, *self.grid[y].get_colors())
+                                    pixel = UiPixel(False, *self.grid[y].get_colors(x))
                                     pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                     pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
                                     pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
@@ -423,7 +423,7 @@ class TileEditor(ui.element):
         for y in range(len(self.grid)):
             for x in range(len(self.grid[0])):
                 value = bool(self.grid[y].get_pixel(x))
-                colors = self.grid[y].get_colors()
+                colors = self.grid[y].get_colors(x)
                 self.pixel_refs[y][x].set(value, *colors)
                 self.pixel_refs[y][x].repaint(self.background_occlusion)
 
@@ -439,11 +439,11 @@ class TileEditor(ui.element):
 
 
     def paint_fg(self, index: int, x: int, y: int) -> None:
-        self.grid.set_fg(y, index)
+        self.grid.set_fg(x, y, index)
 
 
     def paint_bg(self, index: int, x: int, y: int) -> None:
-        self.grid.set_bg(y, index)
+        self.grid.set_bg(x, y, index)
 
 
     def drag_combinedbrush(self, buttons: int, x: int, y: int) -> None:
@@ -453,15 +453,15 @@ class TileEditor(ui.element):
                 self.dragging_on_pixel = bool(self.grid[y].get_pixel(x))
             if self.dragging_on_pixel:
                 self.grid[y].unset_pattern(x)
-                self.grid[y].set_fg(self.current_fg_color)
+                self.grid[y].set_fg(x, self.current_fg_color)
                 self.repaint()
             else:
                 self.pixel_refs[y][x].set_value(True)
                 self.grid[y].set_pattern(x)
-                self.grid[y].set_fg(self.current_fg_color)
+                self.grid[y].set_fg(x, self.current_fg_color)
                 self.repaint()
         elif buttons == 2:
-            self.grid[y].set_bg(self.current_bg_color)
+            self.grid[y].set_bg(x, self.current_bg_color)
             self.repaint()
         else:
             self.dragging = False
@@ -516,14 +516,14 @@ class TileEditor(ui.element):
         if self.last_tool_button is self.eraser:
             return self.drag_erase(buttons, x, y)
         if self.last_tool_button is self.inverter:
-            return self.invert_line(y)
+            return self.invert_line(x, y)
         await show_message_dialog('Not implemented yet.')
 
 
-    def invert_line(self, y: int) -> None:
-        fg, bg = self.grid.get_fg(y), self.grid.get_bg(y)
-        self.grid[y].set_fg(bg)
-        self.grid[y].set_bg(fg)
+    def invert_line(self, x: int, y: int) -> None:
+        fg, bg = self.grid.get_fg(x, y), self.grid.get_bg(x, y)
+        self.grid[y].set_fg(x, bg)
+        self.grid[y].set_bg(x, fg)
         self.grid[y].invert()
         self.repaint()
 
@@ -533,8 +533,8 @@ class TileEditor(ui.element):
                 if self.confirm_erasing and self.dirty else 'yes'
         if result == 'yes':
             for y in range(len(self.grid)):
-                self.grid.set_fg(y, self.current_fg_color)
-                self.grid.set_bg(y, self.current_bg_color)
+                self.grid.set_fg(None, y, self.current_fg_color)
+                self.grid.set_bg(None, y, self.current_bg_color)
                 for x in range(len(self.grid[0])):
                     self.grid.unset_pattern(x, y)
             self.repaint()
@@ -582,6 +582,7 @@ class TileEditor(ui.element):
 
 if __name__ in {"__main__", "__mp_main__"}:
     with ui.row():
-        TileEditor(parent=ui.column().classes('w-full min-h-screen p-0 m-0'))
+        grid = TileNxN(15, 1, 32, 16)
+        TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
     from common import run
     run()
