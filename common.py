@@ -1,10 +1,14 @@
 # functions
+import os
 
-from nicegui import ui
+from nicegui import ui, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
 
 
 def run() -> None:
+    # Add static directory
+    app.add_static_files('/static', os.path.join(os.path.dirname(__file__), 'static'))
+
     # Inject your personal Font Awesome Kit script into the document head
     ui.add_head_html('<script src="https://kit.fontawesome.com/dd0877df2c.js" crossorigin="anonymous"></script>')
 
@@ -40,6 +44,7 @@ def hex_to_rgb(hex_string: str) -> tuple[int, int, int]:
 
 def get_text_color(bg_color: str) -> str:
     'Returns a text color that is distinct from background color'
+    if bg_color == 'transparent': bg_color = "#686868"
     r, g, b = hex_to_rgb(bg_color)
     luma: float = (r * 0.299 + g * 0.587 + b * 0.114) / 255
     return 'black' if luma > 0.5 else 'white'

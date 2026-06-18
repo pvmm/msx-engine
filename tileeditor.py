@@ -1,9 +1,12 @@
 import json
 
+from typing import Callable
+from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
 from common import header, get_text_color, menu_item
 from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors
+
 
 # constants
 GRID_FG_LAYER_SIZE = 16        # size of foreground color pixel
@@ -98,28 +101,45 @@ class UiPixel(ui.card):
         index = self.fg if self.value else self.bg
         # grid gets poluted when scale is too small
         background_occlusion = self.scale < 8 or background_occlusion
-        self.style(
-            f'''
+        self.style(f'''
             box-shadow: none;
             width: {self.scale}px;
             height: {self.scale}px;
+            background-image: none;
             background-color: {PALETTE[index if background_occlusion else self.bg]};
-            border: 0px solid #444;
+            border: 0px;
             border-radius: 0;
             cursor: pointer;
-            '''
-        )
-        self.inner.style(
-            f'''
+        ''')
+        if self.bg == 0:
+            self.style(f'''
+                background-image: url('static/color0.png');
+                background-size: 100% 100%;
+                background-repeat: no-repeat;
+                background-position: center;
+                image-rendering: pixelated;
+                image-rendering: crisp-edges;
+            ''')
+        self.inner.style(f'''
             width: {2/3 * self.scale}px;
             height: {2/3 * self.scale}px;
+            background-image: none;
             background-color: {PALETTE[index]};
             border: 1px solid {PALETTE[self.fg]};
             visibility: {'hidden' if background_occlusion else 'visible'};
             border-radius: 0;
             cursor: pointer;
-            '''
-        )
+        ''')
+        if self.fg == 0:
+            self.inner.style(f'''
+                border: 1px dashed {get_text_color(PALETTE[self.bg])};
+                background-image: {'''url('static/color0.png')''' if self.value else 'none'};
+                background-size: 100% 100%;
+                background-repeat: no-repeat;
+                background-position: center;
+                image-rendering: pixelated;
+                image-rendering: crisp-edges;
+            ''')
 
 
     def build_ui(self) -> None:
@@ -128,11 +148,42 @@ class UiPixel(ui.card):
         self.repaint(False)
 
 
+class ColorButton(ui.button):
+    label: str | None
+    color: str
+
+    def __init__(self, color: str, label: str = '', on_click: Callable[[events.ClickEventArguments], None] | None = None):
+        super().__init__(label, color=None if color == 'transparent' else color, on_click=on_click)
+        self.label = label
+        self.color = color
+        self.build_ui()
+
+
+    def build_ui(self) -> None:
+        self.style(f'''
+            border: 2px solid #444;
+            width: 30px;
+            height: 30px;
+            overflow: hidden;
+        ''')
+        if self.color == 'transparent':
+            self.style(f'''
+                border: 2px dashed #444;
+                background-image: url('static/color0.png');
+                background-size: 100% 100%;
+                background-repeat: no-repeat;
+                background-position: center;
+                image-rendering: pixelated;
+                image-rendering: crisp-edges;
+            ''')
+        self.tooltip(self.color).props(f'text-color={get_text_color(self.color)}')
+
+
 class TileEditor(ui.element):
     current_fg_color: int = DEFAULT_FG_COLOR
     current_bg_color: int = DEFAULT_BG_COLOR
-    last_fg_button: ui.button
-    last_bg_button: ui.button
+    last_fg_button: ColorButton
+    last_bg_button: ColorButton
     last_tool_button: ui.button
     # combined brush
     dragging: bool = False
@@ -211,7 +262,7 @@ class TileEditor(ui.element):
             with ui.row().classes('items-start gap-8'):
                 self.build_tools()
                 self.build_grid()
-                self.build_sidebar()
+                self.build_palette()
 
 
     def build_tools(self) -> None:
@@ -224,27 +275,27 @@ class TileEditor(ui.element):
                     left click on background pixel: change foreground colour and set pixel
                     left click on foreground pixel: unset pixel only
                     right click: change background colour line'''
-                self.combinedbrush = ui.button(icon='fa-solid fa-magic fa-lg', on_click=self.on_toggle_tool).tooltip(text).props('outline')
+                self.combinedbrush = ui.button(icon='fa-solid fa-magic fa-lg', on_click=self.on_select_tool).tooltip(text).props('outline')
                 self.last_tool_button = self.combinedbrush
 
                 text = '''pattern brush
                     left click: set pixel
                     right click: unset pixel'''
-                self.patternbrush = ui.button(icon='fa-solid fa-pencil fa-lg', on_click=self.on_toggle_tool).tooltip(text)
+                self.patternbrush = ui.button(icon='fa-solid fa-pencil fa-lg', on_click=self.on_select_tool).tooltip(text)
 
                 text = '''color brush
                     left click: set foreground colour in the same line to the selected foreground colour
                     right click: set background colour in the same line to the selected background colour'''
-                self.colorbrush = ui.button(icon='fa-solid fa-brush fa-lg', on_click=self.on_toggle_tool).tooltip(text)
+                self.colorbrush = ui.button(icon='fa-solid fa-brush fa-lg', on_click=self.on_select_tool).tooltip(text)
 
                 text = '''eraser
                     left click: unset pixel'''
-                self.eraser = ui.button(icon='fa-solid fa-eraser fa-lg', on_click=self.on_toggle_tool).tooltip(text)
+                self.eraser = ui.button(icon='fa-solid fa-eraser fa-lg', on_click=self.on_select_tool).tooltip(text)
                 self.eraser.visible = not TOGGLE_MODE
 
                 text = '''inverter
                     switch foreground and background colours and invert pattern in a single line (non destructable)'''
-                self.inverter = ui.button(icon='fa-solid fa-wand-magic-sparkles fa-lg', on_click=self.on_toggle_tool).tooltip(text)
+                self.inverter = ui.button(icon='fa-solid fa-wand-magic-sparkles fa-lg', on_click=self.on_select_tool).tooltip(text)
 
                 ui.separator()
 
@@ -305,33 +356,22 @@ class TileEditor(ui.element):
         self.set_scale(e.args)
 
 
-    def get_label(self, index: int) -> str:
+    def get_colorbutton_label(self, index: int) -> str:
         n = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
         return ['', 'F', 'B', 'FB'][n]
 
 
-    def build_sidebar(self) -> None:
+    def build_palette(self) -> None:
         with ui.column().classes('gap-4 min-w-[260px]'):
             header('Palette')
 
-            with ui.row().classes('gap-2 flex-wrap max-w-[240px]'):
-                for index, color in enumerate(PALETTE[1:], start=1):
+            with ui.row().classes('gap-2 flex-wrap max-w-[180px]'):
+                for index, color in enumerate(PALETTE):
                     sel = ((index == self.current_fg_color) << 0) | ((index == self.current_bg_color) << 1)
                     # chicungunha
-                    button = ui.button(self.get_label(index),
-                                       on_click=lambda e, i=index: self.select_fg_color(e, i)) \
-                        .style(
-                            f'''
-                            width: 40px;
-                            height: 40px;
-                            background-color: {color};
-                            border: 2px solid #444;
-                            overflow: hidden;
-                            '''
-                        ) \
-                        .tooltip(color) \
-                        .props(f'{color=} text-color={get_text_color(color)}') \
-                        .on('contextmenu.prevent', lambda e, i=index: self.select_bg_color(e, i))
+                    button = ColorButton('transparent' if index == 0 else color, self.get_colorbutton_label(index),
+                                    on_click=partial(self.on_select_fg_color, index=index)) \
+                            .on('contextmenu.prevent', partial(self.on_select_bg_color, index=index))
                     if sel & 1: self.last_fg_button = button
                     if sel & 2: self.last_bg_button = button
 
@@ -355,27 +395,27 @@ class TileEditor(ui.element):
             self.last_tool_button = sender
 
 
-    def on_toggle_tool(self, event: events.ClickEventArguments) -> None:
+    def on_select_tool(self, event: events.ClickEventArguments) -> None:
         self.select_tool(event.sender)
 
 
-    def select_fg_color(self, event: events.ClickEventArguments, index: int) -> None:
+    def on_select_fg_color(self, event: events.ClickEventArguments, index: int) -> None:
         tmp = self.current_fg_color
         self.current_fg_color = index
         if self.last_fg_button:
-            self.last_fg_button.set_text(self.get_label(tmp))
-        if isinstance(event.sender, ui.button):
-            event.sender.set_text(self.get_label(index))
+            self.last_fg_button.set_text(self.get_colorbutton_label(tmp))
+        if isinstance(event.sender, ColorButton):
+            event.sender.set_text(self.get_colorbutton_label(index))
             self.last_fg_button = event.sender
 
 
-    def select_bg_color(self, event: events.GenericEventArguments, index: int) -> None:
+    def on_select_bg_color(self, event: events.GenericEventArguments, index: int) -> None:
         tmp = self.current_bg_color
         self.current_bg_color = index
-        if self.last_bg_button:
-            self.last_bg_button.set_text(self.get_label(tmp))
-        if isinstance(event.sender, ui.button):
-            event.sender.set_text(self.get_label(index))
+        if self.last_bg_button != event.sender:
+            self.last_bg_button.set_text(self.get_colorbutton_label(tmp))
+        if isinstance(event.sender, ColorButton):
+            event.sender.set_text(self.get_colorbutton_label(index))
             self.last_bg_button = event.sender
 
 
