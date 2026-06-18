@@ -1,6 +1,6 @@
 [tool.mypy]
 # Make mypy strict but practical
-python_version = "3.11"
+python_version = "3.14"
 strict = true
 warn_unused_configs = true
 warn_unused_ignores = true
