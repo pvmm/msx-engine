@@ -330,8 +330,7 @@ class TileEditor(ui.element):
                     ui.label('Grid').classes('text-lg font-semibold')
                     with ui.column().classes('gap-0 min-w-[250px] items-center').style('height: 250px;'):
                         ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
-                                .on('update:model-value', lambda e: self.on_update_scale_slider(e),
-                                    leading_events=False, throttle=0)
+                                .on('change', lambda e: self.on_update_scale_slider(e))
                         for y in range(len(self.grid)):
                             row_refs: list[UiPixel] = []
                             with ui.row().classes('gap-0'):
