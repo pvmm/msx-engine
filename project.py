@@ -2,7 +2,7 @@ from nicegui import ui, events
 from tileeditor import TileEditor
 from stageeditor import UiMetatile
 from common import header, get_text_color, enable
-from v9918 import PALETTE, DEFAULT_FG_COLOR, Tile8x8
+from v9918 import PALETTE, DEFAULT_FG_COLOR, TileNxN
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
 
 
@@ -228,7 +228,7 @@ class Project:
         with self.tiles_row:
             tooltip = f'color #{bg_color} ({PALETTE[bg_color]})'
             self.background_tiles.append(
-                self.select_tile(UiMetatile(Tile8x8(DEFAULT_FG_COLOR, bg_color))
+                self.select_tile(UiMetatile(TileNxN(DEFAULT_FG_COLOR, bg_color))
                         .classes('no-select')
                         .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
             )
@@ -254,7 +254,7 @@ class Project:
         with ui.dialog() as dialog, ui.card().style('max-width: none;') as parent:
             if self.selected_tile:
                 if self.selected_tile:
-                    acopy = Tile8x8.copy(self.selected_tile.grid)
+                    acopy = TileNxN.copy(self.selected_tile.grid)
                     editor = TileEditor(parent, acopy)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
