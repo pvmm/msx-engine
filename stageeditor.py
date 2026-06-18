@@ -3,7 +3,7 @@ import urllib.parse
 
 from nicegui import ui, events
 from nicegui.elements.interactive_image import InteractiveImage
-from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile8x8, grid_to_svg
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, TileNxN, grid_to_svg
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
@@ -45,14 +45,14 @@ class MetatileEditor:
 
 class UiMetatile(InteractiveImage):
     """Represents a metatile in the UI, allowing to display and select/unselect it."""
-    grid: Tile8x8
+    grid: TileNxN
 
-    def __init__(self, data: str | Tile8x8 | None = None, scale: int = 5):
+    def __init__(self, data: str | TileNxN | None = None, scale: int = 5):
         super().__init__()
         self.scale = scale
         if not data:
-            grid = Tile8x8(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
-        elif isinstance(data, Tile8x8):
+            grid = TileNxN(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
+        elif isinstance(data, TileNxN):
             grid = data
         else:
             # Convert from json string
@@ -60,7 +60,7 @@ class UiMetatile(InteractiveImage):
         self.reload(grid)
 
 
-    def reload(self, grid: Tile8x8) -> None:
+    def reload(self, grid: TileNxN) -> None:
         self.grid = grid
         data = grid_to_svg(self.grid, self.scale)
         self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))
@@ -104,7 +104,7 @@ class StageEditor(ui.row):
 
     def add_metatile(self, bgcolor_index: int) -> UiMetatile:
         with self.metatiles_row:
-            metatile = UiMetatile(grid_to_svg(Tile8x8(15, bgcolor_index), 5)) \
+            metatile = UiMetatile(grid_to_svg(TileNxN(15, bgcolor_index), 5)) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
             return metatile
 

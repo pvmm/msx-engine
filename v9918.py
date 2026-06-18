@@ -29,7 +29,7 @@ def combine_colors(fg_color: int, bg_color: int) -> int:
     return ((fg_color << 4) & 0xf0) | (bg_color & 0x0f)
 
 
-def grid_to_svg(grid: Tile8x8 | list[list[int]], scale: int = 20) -> str:
+def grid_to_svg(grid: TileNxN | list[list[int]], scale: int = 20) -> str:
     width = len(grid[0])
     height = len(grid)
 
@@ -54,186 +54,225 @@ def grid_to_svg(grid: Tile8x8 | list[list[int]], scale: int = 20) -> str:
 
 
 # classes
-class Row8:
-    def __init__(self, fg: int = 0, bg: int = 0):
-        # toggle mode: activate an active pixel again to deactivate it
-        self.patterns = [0] * TILE_SIZE
-        # color encoding = (foreground color index << 4) | background color index
-        self.colors = combine_colors(fg, bg)
+class RowN:
+    pattern: list[bool]
+    fg: int
+    bg: int
+
+    def __init__(self, fg: int = 0, bg: int = 0, width: int = 8):
+        if width % 8 != 0:
+            raise ValueError("width must be a multiple of 8")
+        self.pattern = [False] * width
+        self.fg = fg
+        self.bg = bg
 
 
     def __str__(self) -> str:
         bin = ''
-        for value in self.patterns:
+        for value in self.pattern:
             bin += '1' if value else '0'
-        return f'Row({bin},{hex(self.colors)})'
+        return f'Row(p:{bin},c:{hex(self.fg)}:{hex(self.bg)})'
 
 
     def __len__(self) -> int:
-        return 8
+        return len(self.pattern)
 
 
     def __getitem__(self, x: int) -> int:
         """Return the foreground color index if the pixel is active, otherwise return the background color index."""
-        return select_fg(self.colors) if self.patterns[x] else select_bg(self.colors)
+        return self.fg if self.pattern[x] else self.bg
 
 
-    def copy(self, row8: Row8) -> None:
-        self.patterns = list(row8.patterns)
-        self.colors = row8.colors
+    def copy(self, row: RowN) -> None:
+        self.pattern = list(row.pattern)
+        self.fg, self.bg = row.fg, row.bg
 
 
     def set_fg(self, fg: int) -> None:
-        # replace foreground color (the infamous color clash)
-        self.colors = (self.colors & 0x0f) | ((fg << 4) & 0xf0)
+        self.fg = fg
 
 
-    def get_pixel(self, x: int) -> int:
-        return self.patterns[x]
+    def get_pixel(self, x: int) -> bool:
+        return self.pattern[x]
 
 
     def set_pattern(self, x: int) -> None:
-        self.patterns[x] = 1
+        self.pattern[x] = True
 
 
     def unset_pattern(self, x: int) -> None:
-        self.patterns[x] = 0
+        self.pattern[x] = False
 
 
     def set_bg(self, bg: int) -> None:
-        # replace background color
-        self.colors = (self.colors & 0xf0) | (bg & 0x0f)
+        self.bg = bg
 
 
     def get_fg(self) -> int:
-        return select_fg(self.colors)
+        return self.fg
 
 
     def get_bg(self) -> int:
-        return select_bg(self.colors)
+        return self.bg
 
 
-    def get_combined(self) -> int:
-        return self.colors
+    def get_colors(self) -> tuple[int, int]:
+        return self.fg, self.bg
+
+
+    def invert(self) -> None:
+        '''Invert pattern inplace'''
+        for x in range(len(self)):
+            self.pattern[x] = not self.pattern[x]
 
 
     def mirror(self) -> None:
         '''mirror pattern inplace'''
-        self.patterns = list(reversed(self.patterns))
+        self.pattern = list(reversed(self.pattern))
 
 
     def shift_left(self) -> None:
         '''shift left inplace'''
-        self.patterns.append(self.patterns.pop(0))
+        self.pattern.append(self.pattern.pop(0))
 
 
     def shift_right(self) -> None:
         '''shift right inplace'''
-        self.patterns.insert(0, self.patterns.pop())
+        self.pattern.insert(0, self.pattern.pop())
 
 
-class Tile8x8:
-    patterns: list[Row8]
+class TileNxN:
+    rows: list[RowN]
 
     @staticmethod
-    def copy(tile8x8: Tile8x8) -> Tile8x8:
-        self = Tile8x8()
-        for i, row in enumerate(tile8x8.patterns):
-            self.patterns[i].copy(row)
+    def copy(tile: TileNxN) -> TileNxN:
+        self = TileNxN()
+        for i, row in enumerate(tile.rows):
+            self.rows[i].copy(row)
         return self
 
 
-    def __init__(self, fg: int = 0, bg: int = 0):
-        self.patterns: list[Row8] = [Row8(fg, bg) for _ in range(TILE_SIZE)]
+    def __init__(self, fg: int = 0, bg: int = 0, width: int = 8, height: int = 8):
+        if not width or width % 8 != 0:
+            raise ValueError("width must be a multiple of 8")
+        if not height or height % 8 != 0:
+            raise ValueError("width must be a multiple of 8")
+        self.rows: list[RowN] = [RowN(fg, bg, width) for _ in range(height)]
 
 
     def __str__(self) -> str:
-        return f'Tile8x8({' '.join([str(x) for x in self.patterns])})'
+        className = self.__class__.__name__
+        return f'{className}({' '.join([str(x) for x in self.rows])})'
 
 
     def __len__(self) -> int:
-        return 8
+        return len(self.rows)
 
 
-    def __getitem__(self, index: int) -> Row8:
-        return self.patterns[index]
+    def __getitem__(self, y: int) -> RowN:
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        return self.rows[y]
 
 
-    def __setitem__(self, index: int, value: Row8) -> None:
-        self.patterns[index] = value
+    def __setitem__(self, y: int, row: RowN) -> None:
+        self.rows[y] = row
 
 
     def get_pixel(self, x: int, y: int) -> int:
-        return self.patterns[y].get_pixel(x)
+        if x < 0 or x > len(self[0]):
+            raise IndexError('outside bounds')
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        return self.rows[y].get_pixel(x)
 
 
     def set_pattern(self, x: int, y: int) -> None:
-        self.patterns[y].set_pattern(x)
+        if x < 0 or x > len(self[0]):
+            raise IndexError('outside bounds')
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        self.rows[y].set_pattern(x)
 
 
     def unset_pattern(self, x: int, y: int) -> None:
-        self.patterns[y].unset_pattern(x)
+        if x < 0 or x > len(self[0]):
+            raise IndexError('outside bounds')
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        self.rows[y].unset_pattern(x)
 
 
     def set_fg(self, y: int, index: int) -> None:
-        self.patterns[y].set_fg(index)
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        self.rows[y].set_fg(index)
 
 
     def set_bg(self, y: int, index: int) -> None:
-        self.patterns[y].set_bg(index)
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        self.rows[y].set_bg(index)
 
 
     def get_fg(self, y: int) -> int:
-        return self.patterns[y].get_fg()
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        return self.rows[y].get_fg()
 
 
     def get_bg(self, y: int) -> int:
-        return self.patterns[y].get_bg()
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        return self.rows[y].get_bg()
 
 
-    def get_combined(self, y: int) -> int:
-        return self.patterns[y].get_combined()
+    def get_colors(self, y: int) -> tuple[int, int]:
+        if y < 0 or y > len(self):
+            raise IndexError('outside bounds')
+        return self.rows[y].get_colors()
 
 
     def mirror_horizontally(self) -> None:
         '''mirror horizontally inplace'''
         for y in range(TILE_SIZE):
-            self.patterns[y].mirror()
+            self.rows[y].mirror()
 
 
     def mirror_vertically(self) -> None:
-        tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
-        for y in range(TILE_SIZE):
-            tmp[TILE_SIZE - y - 1] = self.patterns[y]
-        self.patterns = tmp
+        tmp: list[RowN] = [RowN() for _ in range(len(self))]
+        for y in range(len(self)):
+            tmp[TILE_SIZE - y - 1] = self.rows[y]
+        self.rows = tmp
 
 
     def shift_left(self) -> None:
         '''shift horizontally inplace'''
-        for y in range(TILE_SIZE):
-            self.patterns[y].shift_left()
+        for y in range(len(self)):
+            self.rows[y].shift_left()
 
 
     def shift_right(self) -> None:
         '''shift horizontally inplace'''
-        for y in range(TILE_SIZE):
-            self.patterns[y].shift_right()
+        for y in range(len(self)):
+            self.rows[y].shift_right()
 
 
     def shift_up(self) -> None:
-        tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
-        for y in range(TILE_SIZE):
-            tmp[(y - 1) % TILE_SIZE].copy(self.patterns[y])
-        self.patterns = tmp
+        tmp: list[RowN] = [RowN() for _ in range(len(self))]
+        for y in range(len(self)):
+            tmp[(y - 1) % len(self)].copy(self.rows[y])
+        self.rows = tmp
 
 
     def shift_down(self) -> None:
-        tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
-        for y in range(TILE_SIZE):
-            tmp[(y + 1) % TILE_SIZE].copy(self.patterns[y])
-        self.patterns = tmp
+        tmp: list[RowN] = [RowN() for _ in range(len(self))]
+        for y in range(len(self)):
+            tmp[(y + 1) % len(self)].copy(self.rows[y])
+        self.rows = tmp
 
 
     def set_copy_format(self, format: str) -> None:
+        '''copy and paste data'''
         pass
 

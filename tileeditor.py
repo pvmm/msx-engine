@@ -5,7 +5,7 @@ from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
 from common import header, get_text_color, menu_item
-from v9918 import Tile8x8, TILE_SIZE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors
+from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors
 
 
 # constants
@@ -55,12 +55,12 @@ class UiPixel(ui.card):
     # ui elements
     inner: ui.card
 
-    def __init__(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None, scale: int | None = None):
+    def __init__(self, value: bool, fg: int | None = None, bg: int | None = None, scale: int | None = None):
         super().__init__()
         with self:
             # Just set values before initializing
             self.set_value(value)
-            self.set_colors(combined, fg, bg)
+            self.set_colors(fg, bg)
             self.set_scale(scale)
             self.initialized = True
             self.build_ui()
@@ -70,14 +70,11 @@ class UiPixel(ui.card):
         self.value = value
 
 
-    def set_colors(self, combined: int | None = None, fg: int | None = None, bg: int | None = None) -> None:
-        if combined:
-            self.fg, self.bg = divide_colors(combined)
-        else:
-            if not fg is None:
-                self.fg = fg
-            if not bg is None:
-                self.bg = bg
+    def set_colors(self, fg: int | None = None, bg: int | None = None) -> None:
+        if not fg is None:
+            self.fg = fg
+        if not bg is None:
+            self.bg = bg
         if self.initialized:
             self.repaint(False)
 
@@ -91,9 +88,9 @@ class UiPixel(ui.card):
             self.repaint(False)
 
 
-    def set(self, value: bool, combined: int | None = None, fg: int | None = None, bg: int | None = None) -> None:
+    def set(self, value: bool, fg: int | None = None, bg: int | None = None) -> None:
         self.set_value(value)
-        self.set_colors(combined, fg, bg)
+        self.set_colors(fg, bg)
 
 
     def repaint(self, background_occlusion: bool) -> None:
@@ -204,7 +201,7 @@ class TileEditor(ui.element):
     eraser: ui.button
     inverter: ui.button
 
-    def __init__(self, parent: ui.element, grid: Tile8x8 | object | None = None, fg: int | None = None, bg: int | None = None):
+    def __init__(self, parent: ui.element, grid: TileNxN | object | None = None, fg: int | None = None, bg: int | None = None):
         super().__init__('div')
         self.parent = parent
 
@@ -216,8 +213,8 @@ class TileEditor(ui.element):
 
         # UI elements to remember
         if not grid:
-            self.grid = Tile8x8(self.current_fg_color, self.current_bg_color)
-        elif isinstance(grid, Tile8x8):
+            self.grid = TileNxN(self.current_fg_color, self.current_bg_color)
+        elif isinstance(grid, TileNxN):
             self.grid = grid
         else:
             self.grid = json.load(grid) # type: ignore
@@ -225,7 +222,8 @@ class TileEditor(ui.element):
         # define editor title
         width = len(self.grid[0])
         height = len(self.grid)
-        self.title = f'{width}x{height} Tile'
+        title = 'Tile' if width == height == 8 else 'Metatile'
+        self.title = f'{width}x{height} {title}'
 
         self.set_pixel_function = self.grid.set_pattern
         self.pixel_refs: list[list[UiPixel]] = []
@@ -336,11 +334,11 @@ class TileEditor(ui.element):
                         ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
                                 .on('update:model-value', lambda e: self.on_update_scale_slider(e),
                                     leading_events=False, throttle=0)
-                        for y in range(TILE_SIZE):
+                        for y in range(len(self.grid)):
                             row_refs: list[UiPixel] = []
                             with ui.row().classes('gap-0'):
-                                for x in range(TILE_SIZE):
-                                    pixel = UiPixel(False, self.grid[y].get_combined())
+                                for x in range(len(self.grid[0])):
+                                    pixel = UiPixel(False, *self.grid[y].get_colors())
                                     pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                     pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                     pixel.on('contextmenu.prevent', lambda: None)
@@ -349,8 +347,8 @@ class TileEditor(ui.element):
 
 
     def set_scale(self, value: int) -> None:
-        for y in range(TILE_SIZE):
-            for x in range(TILE_SIZE):
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[0])):
                 self.pixel_refs[y][x].set_scale(value)
         self.repaint()
 
@@ -423,11 +421,11 @@ class TileEditor(ui.element):
 
 
     def repaint(self) -> None:
-        for y in range(TILE_SIZE):
-            for x in range(TILE_SIZE):
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[0])):
                 value = bool(self.grid[y].get_pixel(x))
-                combined = self.grid[y].get_combined()
-                self.pixel_refs[y][x].set(value, combined=combined)
+                colors = self.grid[y].get_colors()
+                self.pixel_refs[y][x].set(value, *colors)
                 self.pixel_refs[y][x].repaint(self.background_occlusion)
 
 
@@ -521,7 +519,7 @@ class TileEditor(ui.element):
         fg, bg = self.grid.get_fg(y), self.grid.get_bg(y)
         self.grid[y].set_fg(bg)
         self.grid[y].set_bg(fg)
-        self.grid[y].pattern = 0xff & ~self.grid[y].pattern
+        self.grid[y].invert()
         self.repaint()
 
 
@@ -529,10 +527,10 @@ class TileEditor(ui.element):
         result = await show_confirm_dialog('Are you sure you want to delete the tile?') \
                 if self.confirm_erasing and self.dirty else 'yes'
         if result == 'yes':
-            for y in range(TILE_SIZE):
+            for y in range(len(self.grid)):
                 self.grid.set_fg(y, self.current_fg_color)
                 self.grid.set_bg(y, self.current_bg_color)
-                for x in range(TILE_SIZE):
+                for x in range(len(self.grid[0])):
                     self.grid.unset_pattern(x, y)
             self.repaint()
             self.dirty = False
