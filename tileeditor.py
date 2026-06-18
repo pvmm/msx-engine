@@ -1,6 +1,6 @@
 import json
 
-from typing import Callable
+from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
@@ -201,7 +201,7 @@ class TileEditor(ui.element):
     eraser: ui.button
     inverter: ui.button
 
-    def __init__(self, parent: ui.element, grid: TileNxN | object | None = None, fg: int | None = None, bg: int | None = None):
+    def __init__(self, parent: ui.element, grid: TileNxN | IO[str] | IO[bytes] | None = None, fg: int | None = None, bg: int | None = None):
         super().__init__('div')
         self.parent = parent
 
@@ -217,7 +217,7 @@ class TileEditor(ui.element):
         elif isinstance(grid, TileNxN):
             self.grid = grid
         else:
-            self.grid = json.load(grid) # type: ignore
+            self.grid = json.load(grid)
 
         # define editor title
         width = len(self.grid[0])
