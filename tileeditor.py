@@ -177,6 +177,7 @@ class ColorButton(ui.button):
 
 
 class TileEditor(ui.element):
+    title: str
     current_fg_color: int = DEFAULT_FG_COLOR
     current_bg_color: int = DEFAULT_BG_COLOR
     last_fg_button: ColorButton
@@ -255,10 +256,7 @@ class TileEditor(ui.element):
                             text = 'hide background pixel when foreground pixel is visible'
                             menu_item(ui.switch('Activate background occlusion', value=self.background_occlusion,
                                       on_change=self.toggle_background_occlusion)).tooltip(text)
-                if self.title:
-                    header(self.title)
-                else:
-                    header(f'{TILE_SIZE}x{TILE_SIZE} Tile Editor')
+                header(self.title)
 
             with ui.row().classes('items-start gap-8'):
                 self.build_tools()
