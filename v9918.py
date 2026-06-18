@@ -56,22 +56,25 @@ def grid_to_svg(grid: TileNxN | list[list[int]], scale: int = 20) -> str:
 # classes
 class RowN:
     pattern: list[bool]
-    fg: int
-    bg: int
+    fg: list[int]
+    bg: list[int]
 
     def __init__(self, fg: int = 0, bg: int = 0, width: int = 8):
         if width % 8 != 0:
             raise ValueError("width must be a multiple of 8")
         self.pattern = [False] * width
-        self.fg = fg
-        self.bg = bg
+        self.fg = [fg] * (width // TILE_SIZE)
+        self.bg = [bg] * (width // TILE_SIZE)
 
 
     def __str__(self) -> str:
-        bin = ''
-        for value in self.pattern:
-            bin += '1' if value else '0'
-        return f'Row(p:{bin},c:{hex(self.fg)}:{hex(self.bg)})'
+        s = ''
+        for x in range(0, len(self) // 8):
+            bin = ''
+            for value in self.pattern[x * 8: (x + 1) * 8]:
+                bin += '1' if value else '0'
+            s += f'(p:{bin},c:{hex(self.fg[x])}:{hex(self.bg[x])})\n'
+        return s
 
 
     def __len__(self) -> int:
@@ -80,44 +83,66 @@ class RowN:
 
     def __getitem__(self, x: int) -> int:
         """Return the foreground color index if the pixel is active, otherwise return the background color index."""
-        return self.fg if self.pattern[x] else self.bg
+        return self.fg[x // TILE_SIZE] if self.pattern[x] else self.bg[x // TILE_SIZE]
 
 
     def copy(self, row: RowN) -> None:
         self.pattern = list(row.pattern)
-        self.fg, self.bg = row.fg, row.bg
+        self.fg, self.bg = list(row.fg), list(row.bg)
 
 
-    def set_fg(self, fg: int) -> None:
-        self.fg = fg
+    def set_fg(self, x: int | None, fg: int) -> None:
+        if x == None:
+            self.fg = [fg] * (len(self) // TILE_SIZE)
+        else:
+            if x < 0 or x > len(self):
+                raise IndexError('outside bounds')
+            self.fg[x // TILE_SIZE] = fg
 
 
     def get_pixel(self, x: int) -> bool:
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
         return self.pattern[x]
 
 
     def set_pattern(self, x: int) -> None:
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
         self.pattern[x] = True
 
 
     def unset_pattern(self, x: int) -> None:
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
         self.pattern[x] = False
 
 
-    def set_bg(self, bg: int) -> None:
-        self.bg = bg
+    def set_bg(self, x: int | None, bg: int) -> None:
+        if x == None:
+            self.bg = [bg] * (len(self) // TILE_SIZE)
+        else:
+            if x < 0 or x > len(self):
+                raise IndexError('outside bounds')
+            self.bg[x // TILE_SIZE] = bg
 
 
-    def get_fg(self) -> int:
-        return self.fg
+    def get_fg(self, x: int) -> int:
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
+        return self.fg[x // TILE_SIZE]
 
 
-    def get_bg(self) -> int:
-        return self.bg
+    def get_bg(self, x: int) -> int:
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
+        return self.bg[x // TILE_SIZE]
 
 
-    def get_colors(self) -> tuple[int, int]:
-        return self.fg, self.bg
+    def get_colors(self, x: int) -> tuple[int, int]:
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
+        return self.fg[x // TILE_SIZE], self.bg[x // TILE_SIZE]
 
 
     def invert(self) -> None:
@@ -128,6 +153,8 @@ class RowN:
 
     def mirror(self) -> None:
         '''mirror pattern inplace'''
+        self.fg = list(reversed(self.fg))
+        self.bg = list(reversed(self.bg))
         self.pattern = list(reversed(self.pattern))
 
 
@@ -203,46 +230,46 @@ class TileNxN:
         self.rows[y].unset_pattern(x)
 
 
-    def set_fg(self, y: int, index: int) -> None:
+    def set_fg(self, x: int | None, y: int, index: int) -> None:
         if y < 0 or y > len(self):
             raise IndexError('outside bounds')
-        self.rows[y].set_fg(index)
+        self.rows[y].set_fg(x, index)
 
 
-    def set_bg(self, y: int, index: int) -> None:
+    def set_bg(self, x: int | None, y: int, index: int) -> None:
         if y < 0 or y > len(self):
             raise IndexError('outside bounds')
-        self.rows[y].set_bg(index)
+        self.rows[y].set_bg(x, index)
 
 
-    def get_fg(self, y: int) -> int:
+    def get_fg(self, x: int, y: int) -> int:
         if y < 0 or y > len(self):
             raise IndexError('outside bounds')
-        return self.rows[y].get_fg()
+        return self.rows[y].get_fg(x)
 
 
-    def get_bg(self, y: int) -> int:
+    def get_bg(self, x: int, y: int) -> int:
         if y < 0 or y > len(self):
             raise IndexError('outside bounds')
-        return self.rows[y].get_bg()
+        return self.rows[y].get_bg(x)
 
 
-    def get_colors(self, y: int) -> tuple[int, int]:
+    def get_colors(self, x: int, y: int) -> tuple[int, int]:
         if y < 0 or y > len(self):
             raise IndexError('outside bounds')
-        return self.rows[y].get_colors()
+        return self.rows[y].get_colors(x)
 
 
     def mirror_horizontally(self) -> None:
         '''mirror horizontally inplace'''
-        for y in range(TILE_SIZE):
+        for y in range(len(self)):
             self.rows[y].mirror()
 
 
     def mirror_vertically(self) -> None:
         tmp: list[RowN] = [RowN() for _ in range(len(self))]
         for y in range(len(self)):
-            tmp[TILE_SIZE - y - 1] = self.rows[y]
+            tmp[len(self) - y - 1] = self.rows[y]
         self.rows = tmp
 
 
