@@ -193,8 +193,8 @@ class TileEditor(ui.element):
     # data has changed and need saving?
     dirty: bool = False
     # control mouse dragging
-    old_x: int | None = None
-    old_y: int | None = None
+    old_buttons: int | None = None
+    old_pixel: UiPixel | None = None
 
     # ui elements
     patternbrush: ui.button
@@ -338,6 +338,7 @@ class TileEditor(ui.element):
                                 for x in range(len(self.grid[0])):
                                     pixel = UiPixel(False, *self.grid[y].get_colors())
                                     pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                    pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
                                     pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                     pixel.on('contextmenu.prevent', lambda: None)
                                     row_refs.append(pixel)
@@ -488,23 +489,29 @@ class TileEditor(ui.element):
         self.repaint()
 
 
+    def on_undrag_on_grid(self, event: events.GenericEventArguments, x: int, y: int) -> None:
+        self.old_buttons = event.args['buttons']
+        self.dragging = False
+
+
     async def on_drag_on_grid(self, event: events.GenericEventArguments, x: int, y:int) -> None:
-        # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
-        # button was released
+        # discard mouseover when no button is pressed
         if buttons == 0:
-            self.dragging = False
             return
-        # nothing to update
-        if self.old_x == x and self.old_y == y:
+        # discard event when no there is no update
+        if self.old_buttons == buttons and self.old_pixel == event.sender:
             return
-        self.old_x, self.old_y, self.dirty = x, y, True
+        # update when last UiPixel changed
+        if isinstance(event.sender, UiPixel):
+            self.old_pixel = event.sender
+            self.old_button = buttons
+            self.dirty = True
         if self.last_tool_button is self.combinedbrush:
             return self.drag_combinedbrush(buttons, x, y)
         if self.last_tool_button is self.patternbrush:
             return self.drag_patternbrush(buttons, x, y)
         if self.last_tool_button is self.colorbrush:
-            print('colorbrush!')
             return self.drag_colorbrush(buttons, x, y)
         if self.last_tool_button is self.eraser:
             return self.drag_erase(buttons, x, y)
