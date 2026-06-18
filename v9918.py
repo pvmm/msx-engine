@@ -29,13 +29,6 @@ def combine_colors(fg_color: int, bg_color: int) -> int:
     return ((fg_color << 4) & 0xf0) | (bg_color & 0x0f)
 
 
-def mirror(pattern: int) -> int:
-    pattern = ((pattern & 0xF0) >> 4) | ((pattern & 0x0F) << 4)
-    pattern = ((pattern & 0xCC) >> 2) | ((pattern & 0x33) << 2)
-    pattern = ((pattern & 0xAA) >> 1) | ((pattern & 0x55) << 1)
-    return pattern
-
-
 def grid_to_svg(grid: Tile8x8 | list[list[int]], scale: int = 20) -> str:
     width = len(grid[0])
     height = len(grid)
@@ -64,13 +57,16 @@ def grid_to_svg(grid: Tile8x8 | list[list[int]], scale: int = 20) -> str:
 class Row8:
     def __init__(self, fg: int = 0, bg: int = 0):
         # toggle mode: activate an active pixel again to deactivate it
-        self.pattern = 0
+        self.patterns = [0] * TILE_SIZE
         # color encoding = (foreground color index << 4) | background color index
         self.colors = combine_colors(fg, bg)
 
 
     def __str__(self) -> str:
-        return f'Row({bin(self.pattern)},{hex(self.colors)})'
+        bin = ''
+        for value in self.patterns:
+            bin += '1' if value else '0'
+        return f'Row({bin},{hex(self.colors)})'
 
 
     def __len__(self) -> int:
@@ -79,34 +75,34 @@ class Row8:
 
     def __getitem__(self, x: int) -> int:
         """Return the foreground color index if the pixel is active, otherwise return the background color index."""
-        return self.colors if self.pattern & (1 << (7 - x)) else select_bg(self.colors)
+        return select_fg(self.colors) if self.patterns[x] else select_bg(self.colors)
 
 
     def copy(self, row8: Row8) -> None:
-        self.pattern = row8.pattern
+        self.patterns = list(row8.patterns)
         self.colors = row8.colors
 
 
-    def set_fg(self, index: int) -> None:
+    def set_fg(self, fg: int) -> None:
         # replace foreground color (the infamous color clash)
-        self.colors = (self.colors & 0x0f) | ((index << 4) & 0xf0)
+        self.colors = (self.colors & 0x0f) | ((fg << 4) & 0xf0)
 
 
     def get_pixel(self, x: int) -> int:
-        return not not self.pattern & (1 << (7 - x))
+        return self.patterns[x]
 
 
     def set_pattern(self, x: int) -> None:
-        self.pattern |= 1 << (7 - x)
+        self.patterns[x] = 1
 
 
     def unset_pattern(self, x: int) -> None:
-        self.pattern &= ~(1 << (7 - x))
+        self.patterns[x] = 0
 
 
-    def set_bg(self, index: int) -> None:
+    def set_bg(self, bg: int) -> None:
         # replace background color
-        self.colors = (self.colors & 0xf0) | (index & 0x0f)
+        self.colors = (self.colors & 0xf0) | (bg & 0x0f)
 
 
     def get_fg(self) -> int:
@@ -123,15 +119,17 @@ class Row8:
 
     def mirror(self) -> None:
         '''mirror pattern inplace'''
-        self.pattern = mirror(self.pattern)
+        self.patterns = list(reversed(self.patterns))
 
 
     def shift_left(self) -> None:
-        self.pattern = ((self.pattern << 1) | (self.pattern >> 7)) & 0xFF
+        '''shift left inplace'''
+        self.patterns.append(self.patterns.pop(0))
 
 
     def shift_right(self) -> None:
-        self.pattern = ((self.pattern >> 1) | (self.pattern << 7)) & 0xFF
+        '''shift right inplace'''
+        self.patterns.insert(0, self.patterns.pop())
 
 
 class Tile8x8:
@@ -225,14 +223,14 @@ class Tile8x8:
     def shift_up(self) -> None:
         tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
         for y in range(TILE_SIZE):
-            tmp[(y - 1) % TILE_SIZE] = self.patterns[y]
+            tmp[(y - 1) % TILE_SIZE].copy(self.patterns[y])
         self.patterns = tmp
 
 
     def shift_down(self) -> None:
         tmp: list[Row8] = [Row8() for _ in range(TILE_SIZE)]
         for y in range(TILE_SIZE):
-            tmp[(y + 1) % TILE_SIZE] = self.patterns[y]
+            tmp[(y + 1) % TILE_SIZE].copy(self.patterns[y])
         self.patterns = tmp
 
 

@@ -74,9 +74,9 @@ class UiPixel(ui.card):
         if combined:
             self.fg, self.bg = divide_colors(combined)
         else:
-            if fg:
+            if not fg is None:
                 self.fg = fg
-            if bg:
+            if not bg is None:
                 self.bg = bg
         if self.initialized:
             self.repaint(False)
@@ -133,7 +133,7 @@ class UiPixel(ui.card):
         if self.fg == 0:
             self.inner.style(f'''
                 border: 1px dashed {get_text_color(PALETTE[self.bg])};
-                background-image: {'''url('static/color0.png')''' if self.value else 'none'};
+                background-image: url('static/color0.png');
                 background-size: 100% 100%;
                 background-repeat: no-repeat;
                 background-position: center;
@@ -194,6 +194,9 @@ class TileEditor(ui.element):
     background_occlusion: bool = False
     # data has changed and need saving?
     dirty: bool = False
+    # control mouse dragging
+    old_x: int | None = None
+    old_y: int | None = None
 
     # ui elements
     patternbrush: ui.button
@@ -492,10 +495,14 @@ class TileEditor(ui.element):
     async def on_drag_on_grid(self, event: events.GenericEventArguments, x: int, y:int) -> None:
         # discard mouseover when no button is pressed
         buttons = event.args.get('buttons', 0)
+        # button was released
         if buttons == 0:
             self.dragging = False
             return
-        self.dirty = True
+        # nothing to update
+        if self.old_x == x and self.old_y == y:
+            return
+        self.old_x, self.old_y, self.dirty = x, y, True
         if self.last_tool_button is self.combinedbrush:
             return self.drag_combinedbrush(buttons, x, y)
         if self.last_tool_button is self.patternbrush:
