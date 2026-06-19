@@ -195,12 +195,17 @@ class TileEditor(ui.element):
     # control mouse dragging
     old_buttons: int | None = None
     old_pixel: UiPixel | None = None
+    shift_left_released: bool = False
+    shift_right_released: bool = False
 
     # ui elements
     patternbrush: ui.button
     colorbrush: ui.button
     eraser: ui.button
     inverter: ui.button
+    pixel_refs: list[list[UiPixel]]
+    bg_color_refs: list[list[ui.element]]
+    fg_color_refs: list[list[ui.element]]
 
     def __init__(self, parent: ui.element, grid: TileNxN | IO[str] | IO[bytes] | None = None, fg: int | None = None, bg: int | None = None):
         super().__init__('div')
@@ -225,11 +230,12 @@ class TileEditor(ui.element):
         height = len(self.grid)
         title = 'Tile' if width == height == 8 else 'Metatile'
         self.title = f'{width}x{height} {title}'
-
         self.set_pixel_function = self.grid.set_pattern
-        self.pixel_refs: list[list[UiPixel]] = []
-        self.bg_color_refs: list[list[ui.element]] = []
-        self.fg_color_refs: list[list[ui.element]] = []
+        self.pixel_refs = []
+        self.bg_color_refs = []
+        self.fg_color_refs = []
+        self.release_shift_left = asyncio.Event()
+        self.release_shift_right = asyncio.Event()
 
         self.build_ui()
 
@@ -337,7 +343,7 @@ class TileEditor(ui.element):
                             row_refs: list[UiPixel] = []
                             with ui.row().classes('gap-0'):
                                 for x in range(len(self.grid[0])):
-                                    pixel = UiPixel(False, *self.grid[y].get_colors(x))
+                                    pixel = UiPixel(True if self.grid.get_pixel(x, y) else False, *self.grid[y].get_colors(x))
                                     pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                     pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
                                     pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
