@@ -259,16 +259,17 @@ class TileEditor(ui.element):
                 header(self.title)
 
             with ui.row().classes('items-start gap-8'):
-                self.build_tools()
+                with ui.column().style('width: 180px;'):
+                    self.build_tools()
+                    self.build_palette()
                 self.build_grid()
-                self.build_palette()
 
 
     def build_tools(self) -> None:
-        with ui.column().classes('gap-1'):
+        with ui.column().classes('gap-0'):
             header('Tools')
 
-            with ui.row().classes('gap-2 flex-wrap max-w-[180px]'):
+            with ui.row().classes('gap-1 flex-wrap max-w-[180px]'):
                 # outline default tool
                 text = '''combined brush
                     left click on background pixel: change foreground colour and set pixel
