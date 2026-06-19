@@ -145,9 +145,12 @@ class RowN:
         return self.fg[x // TILE_SIZE], self.bg[x // TILE_SIZE]
 
 
-    def invert(self) -> None:
+    def invert(self, x: int) -> None:
         '''Invert pattern inplace'''
-        for x in range(len(self)):
+        if x < 0 or x > len(self):
+            raise IndexError('outside bounds')
+        x = x // TILE_SIZE
+        for x in range(x * TILE_SIZE, (x + 1) * TILE_SIZE):
             self.pattern[x] = not self.pattern[x]
 
 
