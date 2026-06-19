@@ -5,7 +5,7 @@ from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
 from common import header, get_text_color, menu_item
-from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors
+from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
 # constants
@@ -419,9 +419,18 @@ class TileEditor(ui.element):
             self.last_bg_button = event.sender
 
 
-    def repaint(self) -> None:
-        for y in range(len(self.grid)):
-            for x in range(len(self.grid[0])):
+    def repaint(self, x: int | None = None, y: int | None = None) -> None:
+        if x is None:
+            x_range = range(len(self.grid[0]))
+        else:
+            tmp = x // TILE_SIZE * TILE_SIZE
+            x_range = range(tmp, tmp + 8)
+        if y is None:
+            y_range = range(len(self.grid))
+        else:
+            y_range = range(y, y + 1)
+        for y in y_range:
+            for x in x_range:
                 value = bool(self.grid[y].get_pixel(x))
                 colors = self.grid[y].get_colors(x)
                 self.pixel_refs[y][x].set(value, *colors)
@@ -454,15 +463,15 @@ class TileEditor(ui.element):
             if self.dragging_on_pixel:
                 self.grid[y].unset_pattern(x)
                 self.grid[y].set_fg(x, self.current_fg_color)
-                self.repaint()
+                self.repaint(x, y)
             else:
                 self.pixel_refs[y][x].set_value(True)
                 self.grid[y].set_pattern(x)
                 self.grid[y].set_fg(x, self.current_fg_color)
-                self.repaint()
+                self.repaint(x, y)
         elif buttons == 2:
             self.grid[y].set_bg(x, self.current_bg_color)
-            self.repaint()
+            self.repaint(x, y)
         else:
             self.dragging = False
             self.dragging_on_pixel = False
@@ -473,7 +482,7 @@ class TileEditor(ui.element):
             self.paint(x, y)
         elif buttons == 2:
             self.unpaint(x, y)
-        self.repaint()
+        self.repaint(x, y)
 
 
     def drag_colorbrush(self, buttons: int, x: int, y: int) -> None:
@@ -481,12 +490,12 @@ class TileEditor(ui.element):
             self.paint_fg(self.current_fg_color, x, y)
         elif buttons == 2:
             self.paint_bg(self.current_bg_color, x, y)
-        self.repaint()
+        self.repaint(x, y)
 
 
     def drag_erase(self, buttons: int, x: int, y: int) -> None:
         self.unpaint(x, y)
-        self.repaint()
+        self.repaint(x, y)
 
 
     def on_undrag_on_grid(self, event: events.GenericEventArguments, x: int, y: int) -> None:
@@ -524,8 +533,8 @@ class TileEditor(ui.element):
         fg, bg = self.grid.get_fg(x, y), self.grid.get_bg(x, y)
         self.grid[y].set_fg(x, bg)
         self.grid[y].set_bg(x, fg)
-        self.grid[y].invert()
-        self.repaint()
+        self.grid[y].invert(x)
+        self.repaint(x, y)
 
 
     async def on_clear_tile(self) -> None:
