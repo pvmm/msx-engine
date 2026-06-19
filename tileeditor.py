@@ -232,7 +232,7 @@ class TileEditor(ui.element):
         # define editor title
         width = len(self.grid[0])
         height = len(self.grid)
-        title = 'Tile' if width == height == 8 else 'Metatile'
+        title = 'Tile' if width == height == TILE_SIZE else 'Metatile'
         self.title = f'{width}x{height} {title}'
         self.set_pixel_function = self.grid.set_pattern
         self.pixel_refs = []
@@ -446,7 +446,7 @@ class TileEditor(ui.element):
             x_range = range(len(self.grid[0]))
         else:
             tmp = x // TILE_SIZE * TILE_SIZE
-            x_range = range(tmp, tmp + 8)
+            x_range = range(tmp, tmp + TILE_SIZE)
         if y is None:
             y_range = range(len(self.grid))
         else:
