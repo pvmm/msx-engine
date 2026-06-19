@@ -22,6 +22,27 @@ def run() -> None:
         }
         ''')
 
+    # Remove default scroll_area padding
+    ui.add_css('''
+        .nicegui-scroll-area .q-scrollarea__content {
+            padding: 0;
+            margin: 0;
+            overflow-x: scroll;
+            opacity: 1 !important;
+        }
+        .q-scrollarea__thumb {
+            opacity: 1 !important;
+            background: #aaa;
+            outline: 2px solid #000;
+            border-radius: 6px;
+        }
+        .q-scrollarea__bar {
+            opacity: 1 !important;
+            background: #444;
+            border-radius: 6px;
+        }
+    ''')
+
     ui.run(title='NiceGUI Tile Editor') 
     
 
@@ -29,6 +50,11 @@ def header(text: str) -> ui.element:
     'Common header format'
     with ui.element('div'):
         return ui.label(text).classes('text-2xl font-semibold')
+
+
+def header2(text: str) -> ui.element:
+    'Common header format'
+    return ui.label(text).classes('text-lg font-semibold')
 
 
 def hex_to_rgb(hex_string: str) -> tuple[int, int, int]:

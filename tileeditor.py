@@ -5,7 +5,7 @@ from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
-from common import header, get_text_color, menu_item
+from common import header, header2, get_text_color, menu_item
 from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
@@ -28,6 +28,7 @@ DEACTIVATE, ACTIVATE, OFF = 0, 1, 2
 
 # Common settings
 toggle_mode_status = OFF
+
 
 # functions
 async def show_message_dialog(message: str) -> str:
@@ -209,6 +210,7 @@ class TileEditor(ui.element):
     fg_color_refs: list[list[ui.element]]
     release_shift_left: asyncio.Event
     release_shift_right: asyncio.Event
+    textarea: ui.textarea
 
 
     def __init__(self, parent: ui.element, grid: TileNxN | IO[str] | IO[bytes] | None = None, fg: int | None = None, bg: int | None = None):
@@ -269,7 +271,7 @@ class TileEditor(ui.element):
                                       on_change=self.toggle_background_occlusion)).tooltip(text)
                 header(self.title)
 
-            with ui.row().classes('items-start gap-8'):
+            with ui.row().classes('w-full items-start gap-8 flex-nowrap'):
                 with ui.column().style('width: 180px;'):
                     self.build_tools()
                     self.build_palette()
@@ -278,7 +280,7 @@ class TileEditor(ui.element):
 
     def build_tools(self) -> None:
         with ui.column().classes('gap-0'):
-            header('Tools')
+            header2('Tools')
 
             with ui.row().classes('gap-1 flex-wrap max-w-[180px]'):
                 # outline default tool
@@ -342,29 +344,45 @@ class TileEditor(ui.element):
 
                 ui.separator()
 
-                ui.button(icon='fa-solid fa-copy fa-lg', on_click=self.on_copy_to_clipboard).props('color=green').tooltip('copy pattern to clipboard')
                 ui.button(icon='fa-solid fa-trash fa-lg', on_click=self.on_clear_tile).props('color=red').tooltip('erase tile completely')
 
 
     def build_grid(self) -> None:
-        with ui.column().classes('gap-1'):
-            with ui.row().classes('gap-1'):
+        with ui.column().classes('w-full gap-1'):
+            with ui.column().classes('w-full gap-0'):
+                with ui.row().classes('w-full gap-1 flex-nowrap'):
+                    header2('Grid')
+                    size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
+                    ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
+                            .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px')
+                with ui.column().classes('gap-0 min-w-[250px] w-full flex-nowrap').style('width: 100%;'):
+                    with ui.scroll_area().classes('w-full p-0 m-0'):
+                        with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap'):
+                            for y in range(len(self.grid)):
+                                row_refs: list[UiPixel] = []
+                                with ui.row().classes('w-full gap-0 p-0 m-0 items-center flex-nowrap'):
+                                    for x in range(len(self.grid[0])):
+                                        pixel = UiPixel(True if self.grid.get_pixel(x, y) else False, *self.grid[y].get_colors(x))
+                                        pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                        pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
+                                        pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                        row_refs.append(pixel)
+                                self.pixel_refs.append(row_refs)
 
-                with ui.column():
-                    ui.label('Grid').classes('text-lg font-semibold')
-                    with ui.column().classes('gap-0 min-w-[250px] items-center').style('height: 250px;'):
-                        ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
-                                .on('change', lambda e: self.on_update_scale_slider(e))
-                        for y in range(len(self.grid)):
-                            row_refs: list[UiPixel] = []
-                            with ui.row().classes('gap-0'):
-                                for x in range(len(self.grid[0])):
-                                    pixel = UiPixel(True if self.grid.get_pixel(x, y) else False, *self.grid[y].get_colors(x))
-                                    pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                    pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
-                                    pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                    row_refs.append(pixel)
-                            self.pixel_refs.append(row_refs)
+                self.textarea = ui.textarea(label='Exported metatile data', value='') \
+                        .props('readonly').classes('w-full')
+
+                with ui.row().classes('gap-2'):
+                    ui.button('Export Hex', on_click=self.on_export_hex_clicked)
+                    ui.button('Export RGB', on_click=self.on_export_rgb_clicked)
+
+
+    def on_export_hex_clicked(self, event: events.ClickEventArguments) -> None:
+        self.textarea.set_value(str(self.grid))
+
+
+    def on_export_rgb_clicked(self) -> None:
+        self.textarea.set_value(str(self.grid))
 
 
     def set_scale(self, value: int) -> None:
@@ -384,8 +402,8 @@ class TileEditor(ui.element):
 
 
     def build_palette(self) -> None:
-        with ui.column().classes('gap-4 min-w-[260px]'):
-            header('Palette')
+        with ui.column().classes('gap-1 min-w-[260px]'):
+            header2('Palette')
 
             with ui.row().classes('gap-2 flex-wrap max-w-[180px]'):
                 for index, color in enumerate(PALETTE):
@@ -576,11 +594,6 @@ class TileEditor(ui.element):
         self.grid.set_copy_format(event.value)
 
 
-    def on_copy_to_clipboard(self, event: events.ClickEventArguments) -> None:
-        script = f'''navigator.clipboard.writeText("{self.grid}")'''
-        ui.run_javascript(script)
-
-
     async def on_mousedown_shift_left(self) -> None:
         self.release_shift_left.clear()
         try:
@@ -647,8 +660,7 @@ class TileEditor(ui.element):
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    with ui.row():
-        grid = TileNxN(15, 1, 32, 16)
-        TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
+    grid = TileNxN(15, 1, 32, 16)
+    TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
     from common import run
     run()
