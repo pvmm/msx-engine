@@ -49,6 +49,7 @@ async def show_confirm_dialog(message: str) -> str:
 
 
 class UiPixel(ui.card):
+    # attributes
     value: bool = False
     fg: int = DEFAULT_FG_COLOR
     bg: int = DEFAULT_BG_COLOR
@@ -56,6 +57,19 @@ class UiPixel(ui.card):
 
     # ui elements
     inner: ui.card
+
+    # CSS additions
+    ui.add_css('''
+        .transparent-uipixel {
+            background-image: url('static/color0.png');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    ''')
+
 
     def __init__(self, value: bool, fg: int | None = None, bg: int | None = None, scale: int | None = None):
         super().__init__()
@@ -111,14 +125,7 @@ class UiPixel(ui.card):
             cursor: pointer;
         ''')
         if self.bg == 0:
-            self.style(f'''
-                background-image: url('static/color0.png');
-                background-size: 100% 100%;
-                background-repeat: no-repeat;
-                background-position: center;
-                image-rendering: pixelated;
-                image-rendering: crisp-edges;
-            ''')
+            self.classes('transparent-uipixel')
         self.inner.style(f'''
             width: {2/3 * self.scale}px;
             height: {2/3 * self.scale}px;
@@ -132,13 +139,8 @@ class UiPixel(ui.card):
         if self.fg == 0:
             self.inner.style(f'''
                 border: 1px dashed {get_text_color(PALETTE[self.bg])};
-                background-image: url('static/color0.png');
-                background-size: 100% 100%;
-                background-repeat: no-repeat;
-                background-position: center;
-                image-rendering: pixelated;
-                image-rendering: crisp-edges;
             ''')
+            self.inner.classes('transparent-uipixel')
 
 
     def build_ui(self) -> None:
