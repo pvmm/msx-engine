@@ -1,4 +1,5 @@
 import json
+import asyncio
 
 from typing import Callable, IO
 from functools import partial
@@ -206,6 +207,9 @@ class TileEditor(ui.element):
     pixel_refs: list[list[UiPixel]]
     bg_color_refs: list[list[ui.element]]
     fg_color_refs: list[list[ui.element]]
+    release_shift_left: asyncio.Event
+    release_shift_right: asyncio.Event
+
 
     def __init__(self, parent: ui.element, grid: TileNxN | IO[str] | IO[bytes] | None = None, fg: int | None = None, bg: int | None = None):
         super().__init__('div')
@@ -306,11 +310,21 @@ class TileEditor(ui.element):
 
                 ui.separator()
 
-                text = 'shift tile pattern left'
-                ui.button(icon='fa-solid fa-arrow-left fa-lg', on_click=self.shift_left).props('color=black').tooltip(text)
+                text = f'''shift left
+                    click: shift tile pattern left
+                    long click: shift tile pattern and colors left 8 times
+                '''
+                ui.button(icon='fa-solid fa-arrow-left fa-lg').props('color=black').tooltip(text) \
+                        .on('mousedown', partial(self.on_mousedown_shift_left)) \
+                        .on('mouseup', partial(self.on_mouseup_shift_left))
 
-                text = 'shift tile pattern right'
-                ui.button(icon='fa-solid fa-arrow-right fa-lg', on_click=self.shift_right).props('color=black').tooltip(text)
+                text = f'''shift right
+                    click: shift tile pattern right
+                    long click: shift tile pattern and colors right 8 times
+                '''
+                ui.button(icon='fa-solid fa-arrow-right fa-lg').props('color=black').tooltip(text) \
+                        .on('mousedown', partial(self.on_mousedown_shift_right)) \
+                        .on('mouseup', partial(self.on_mouseup_shift_right))
 
                 text = 'shift tile up'
                 ui.button(icon='fa-solid fa-arrow-up fa-lg', on_click=self.shift_up).props('color=black').tooltip(text)
@@ -565,9 +579,44 @@ class TileEditor(ui.element):
         ui.run_javascript(script)
 
 
-    def shift_left(self) -> None:
-        self.grid.shift_left()
-        self.repaint()
+    async def on_mousedown_shift_left(self) -> None:
+        self.release_shift_left.clear()
+        try:
+            async with asyncio.timeout(0.5):
+                await self.release_shift_left.wait()
+                # short press: move 1 pixel
+                self.grid.shift_left()
+                self.repaint()
+        except asyncio.TimeoutError:
+            self.shift_left_released = True
+
+
+    def on_mouseup_shift_left(self) -> None:
+        self.release_shift_left.set()
+        if self.shift_left_released:
+            self.shift_left_released = False
+            self.grid.shift_tile_left()
+            self.repaint()
+
+
+    async def on_mousedown_shift_right(self) -> None:
+        self.release_shift_right.clear()
+        try:
+            async with asyncio.timeout(0.5):
+                await self.release_shift_right.wait()
+                # short press: move 1 pixel
+                self.grid.shift_right()
+                self.repaint()
+        except asyncio.TimeoutError:
+            self.shift_right_released = True
+
+
+    def on_mouseup_shift_right(self) -> None:
+        self.release_shift_right.set()
+        if self.shift_right_released:
+            self.shift_right_released = False
+            self.grid.shift_tile_right()
+            self.repaint()
 
 
     def shift_right(self) -> None:
