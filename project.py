@@ -1,3 +1,5 @@
+import common
+
 from nicegui import ui, events
 from tileeditor import TileEditor
 from stageeditor import UiMetatile
@@ -252,10 +254,11 @@ class Project:
     async def on_edit_tile_clicked(self, event: events.ClickEventArguments) -> None:
         editor = None
         if self.selected_tile:
-            width = 260 + len(self.selected_tile.grid[0]) * GRID_PIXEL_MAX
+            grid = TileNxN.copy(self.selected_tile.grid)
+            #grid = TileNxN(15, 1, 48, 32)
+            width = min(common.SCREEN_WIDTH * 0.90, 260 + len(grid[0]) * GRID_PIXEL_MAX)
             with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
-                acopy = TileNxN.copy(self.selected_tile.grid)
-                editor = TileEditor(parent, acopy)
+                editor = TileEditor(parent, grid)
                 with ui.row().classes('w-full justify-end'):
                     ui.button('OK', on_click=lambda: dialog.submit(True))
                     ui.button('Cancel', on_click=lambda: dialog.submit(False))
