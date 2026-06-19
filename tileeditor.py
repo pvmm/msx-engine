@@ -357,7 +357,7 @@ class TileEditor(ui.element):
                             .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px')
                 with ui.column().classes('gap-0 min-w-[250px] w-full flex-nowrap').style('width: 100%;'):
                     with ui.scroll_area().classes('w-full p-0 m-0'):
-                        with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap'):
+                        with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap').style('background-color: #ccc;'):
                             for y in range(len(self.grid)):
                                 row_refs: list[UiPixel] = []
                                 with ui.row().classes('w-full gap-0 p-0 m-0 items-center flex-nowrap'):
