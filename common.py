@@ -1,8 +1,19 @@
 # functions
 import os
 
-from nicegui import ui, app
+from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
+
+
+SCREEN_WIDTH: int = 0
+SCREEN_HEIGHT: int = 0
+
+
+def screen_resize(e: events.GenericEventArguments) -> None:
+    global SCREEN_WIDTH
+    global SCREEN_HEIGHT
+    SCREEN_WIDTH = e.args['width']
+    SCREEN_HEIGHT = e.args['height']
 
 
 def run() -> None:
@@ -12,6 +23,21 @@ def run() -> None:
     # Inject your personal Font Awesome Kit script into the document head
     ui.add_head_html('<link rel="stylesheet" href="static/css/all.min.css">', shared=True)
 
+    # Get window size
+    ui.add_head_html('''
+        <script>
+        function emitSize() {
+            emitEvent('resize', {
+                width: document.body.offsetWidth,
+                height: document.body.offsetHeight,
+            });
+        }
+        window.onload = emitSize;
+        window.onresize = emitSize;
+        </script>
+    ''')
+    ui.on('resize', lambda e: screen_resize(e))
+
     # Change tooltip size
     ui.add_css('''
         .q-tooltip {
@@ -20,7 +46,7 @@ def run() -> None:
         .no-select {
             user-select: none;
         }
-        ''')
+    ''')
 
     # Remove default scroll_area padding
     ui.add_css('''
