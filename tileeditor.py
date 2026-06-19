@@ -312,16 +312,18 @@ class TileEditor(ui.element):
 
                 text = f'''shift left
                     click: shift tile pattern left
-                    long click: shift tile pattern and colors left 8 times
                 '''
+                if len(self.grid[0]) != TILE_SIZE:
+                    text += 'long click: shift tile pattern and colors left 8 times'
                 ui.button(icon='fa-solid fa-arrow-left fa-lg').props('color=black').tooltip(text) \
                         .on('mousedown', partial(self.on_mousedown_shift_left)) \
                         .on('mouseup', partial(self.on_mouseup_shift_left))
 
                 text = f'''shift right
                     click: shift tile pattern right
-                    long click: shift tile pattern and colors right 8 times
                 '''
+                if len(self.grid[0]) != TILE_SIZE:
+                    text += 'long click: shift tile pattern and colors right 8 times'
                 ui.button(icon='fa-solid fa-arrow-right fa-lg').props('color=black').tooltip(text) \
                         .on('mousedown', partial(self.on_mousedown_shift_right)) \
                         .on('mouseup', partial(self.on_mouseup_shift_right))
