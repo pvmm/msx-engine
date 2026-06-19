@@ -250,7 +250,9 @@ class TileEditor(ui.element):
 
     def build_ui(self) -> None:
         with self.parent:
+            # disable context-menu throught
             self.parent.on('contextmenu.prevent', lambda: None)
+            self.parent.classes('no-select')
             with ui.row().classes('items-center flex-nowrap'):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
