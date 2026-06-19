@@ -236,6 +236,7 @@ class TileEditor(ui.element):
 
     def build_ui(self) -> None:
         with self.parent:
+            self.parent.on('contextmenu.prevent', lambda: None)
             with ui.row().classes('items-center flex-nowrap'):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
@@ -340,7 +341,6 @@ class TileEditor(ui.element):
                                     pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
                                     pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
                                     pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                    pixel.on('contextmenu.prevent', lambda: None)
                                     row_refs.append(pixel)
                             self.pixel_refs.append(row_refs)
 
