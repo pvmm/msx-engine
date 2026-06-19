@@ -251,7 +251,7 @@ class Project:
 
     async def on_edit_tile_clicked(self, event: events.ClickEventArguments) -> None:
         editor = None
-        with ui.dialog() as dialog, ui.card().style('max-width: none;') as parent:
+        with ui.dialog() as dialog, ui.card().style('max-width: None; width: 90%;') as parent:
             if self.selected_tile:
                 if self.selected_tile:
                     acopy = TileNxN.copy(self.selected_tile.grid)
