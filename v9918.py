@@ -161,14 +161,30 @@ class RowN:
         self.pattern = list(reversed(self.pattern))
 
 
-    def shift_left(self) -> None:
+    def shift_left(self, times: int = 1) -> None:
         '''shift left inplace'''
-        self.pattern.append(self.pattern.pop(0))
+        for i in range(times):
+            self.pattern.append(self.pattern.pop(0))
 
 
-    def shift_right(self) -> None:
+    def shift_tile_left(self) -> None:
+        '''shift left 8 times inplace'''
+        self.shift_left(TILE_SIZE)
+        self.fg.append(self.fg.pop(0))
+        self.bg.append(self.bg.pop(0))
+
+
+    def shift_right(self, times: int = 1) -> None:
         '''shift right inplace'''
-        self.pattern.insert(0, self.pattern.pop())
+        for i in range(times):
+            self.pattern.insert(0, self.pattern.pop())
+
+
+    def shift_tile_right(self) -> None:
+        '''shift right 8 times inplace'''
+        self.shift_right(TILE_SIZE)
+        self.fg.insert(0, self.fg.pop())
+        self.bg.insert(0, self.bg.pop())
 
 
 class TileNxN:
@@ -276,16 +292,28 @@ class TileNxN:
         self.rows = tmp
 
 
-    def shift_left(self) -> None:
+    def shift_left(self, times: int = 1) -> None:
         '''shift horizontally inplace'''
         for y in range(len(self)):
-            self.rows[y].shift_left()
+            self.rows[y].shift_left(times)
+
+
+    def shift_tile_left(self) -> None:
+        '''shift horizontally inplace'''
+        for y in range(len(self)):
+            self.rows[y].shift_tile_left()
 
 
     def shift_right(self) -> None:
         '''shift horizontally inplace'''
         for y in range(len(self)):
             self.rows[y].shift_right()
+
+
+    def shift_tile_right(self) -> None:
+        '''shift horizontally inplace'''
+        for y in range(len(self)):
+            self.rows[y].shift_tile_right()
 
 
     def shift_up(self) -> None:
