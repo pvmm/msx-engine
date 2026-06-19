@@ -3,7 +3,7 @@ from tileeditor import TileEditor
 from stageeditor import UiMetatile
 from common import header, get_text_color, enable
 from v9918 import PALETTE, DEFAULT_FG_COLOR, TileNxN
-from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE
+from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE, GRID_PIXEL_MAX
 
 
 # constants
@@ -251,18 +251,18 @@ class Project:
 
     async def on_edit_tile_clicked(self, event: events.ClickEventArguments) -> None:
         editor = None
-        with ui.dialog() as dialog, ui.card().style('max-width: None; width: 90%;') as parent:
-            if self.selected_tile:
-                if self.selected_tile:
-                    acopy = TileNxN.copy(self.selected_tile.grid)
-                    editor = TileEditor(parent, acopy)
-            with ui.row().classes('w-full justify-end'):
-                ui.button('OK', on_click=lambda: dialog.submit(True))
-                ui.button('Cancel', on_click=lambda: dialog.submit(False))
-        result = await dialog
-        if result and editor and self.selected_tile:
-            # return tile changes
-            self.selected_tile.reload(editor.grid)
+        if self.selected_tile:
+            width = 260 + len(self.selected_tile.grid[0]) * GRID_PIXEL_MAX
+            with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
+                acopy = TileNxN.copy(self.selected_tile.grid)
+                editor = TileEditor(parent, acopy)
+                with ui.row().classes('w-full justify-end'):
+                    ui.button('OK', on_click=lambda: dialog.submit(True))
+                    ui.button('Cancel', on_click=lambda: dialog.submit(False))
+            result = await dialog
+            if result and editor and self.selected_tile:
+                # return tile changes
+                self.selected_tile.reload(editor.grid)
 
 
     def erase_tile(self, tile: UiMetatile) -> None:

@@ -27,7 +27,8 @@ def run() -> None:
         .nicegui-scroll-area .q-scrollarea__content {
             padding: 0;
             margin: 0;
-            overflow-x: scroll;
+            overflow-x: scroll !important;
+            overflow-y: scroll !important;
             opacity: 1 !important;
         }
         .q-scrollarea__thumb {
