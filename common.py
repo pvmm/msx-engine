@@ -3,8 +3,10 @@ import os
 
 from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
+from nicegui.elements.interactive_image import InteractiveImage
 
 
+# app-wide globals
 SCREEN_WIDTH: int = 0
 SCREEN_HEIGHT: int = 0
 
@@ -125,3 +127,49 @@ def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.
             element.props('disabled')
     return element
 
+
+def grid_to_svg(grid: TileNxN | list[list[int]], scale: int = 20) -> str:
+    width = len(grid[0])
+    height = len(grid)
+
+    svg = [ f'''<svg xmlns="http://www.w3.org/2000/svg"
+            width="{width * scale}"
+            height="{height * scale}">''' ]
+    for y in range(height):
+        for x in range(width):
+            fg = select_fg(grid[y][x])
+            bg = select_bg(grid[y][x])
+            svg.append(
+                f'<rect '
+                f'x="{x * scale}" '
+                f'y="{y * scale}" '
+                f'width="{scale}" '
+                f'height="{scale}" '
+                f'fill="{PALETTE[fg or bg]}" '
+                f'stroke="#444"/>'
+            )
+    svg.append('</svg>')
+    return ''.join(svg)
+
+
+class UiMetatile(InteractiveImage):
+    """Represents a metatile in the UI, allowing to display and select/unselect it."""
+    grid: TileNxN
+
+    def __init__(self, data: str | TileNxN | None = None, scale: int = 5):
+        super().__init__()
+        self.scale = scale
+        if not data:
+            grid = TileNxN(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
+        elif isinstance(data, TileNxN):
+            grid = data
+        else:
+            # Convert from json string
+            grid = json.loads(data)
+        self.reload(grid)
+
+
+    def reload(self, grid: TileNxN) -> None:
+        self.grid = grid
+        data = grid_to_svg(self.grid, self.scale)
+        self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))
