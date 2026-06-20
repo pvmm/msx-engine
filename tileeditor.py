@@ -5,7 +5,7 @@ from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
-from common import header, header2, get_text_color, menu_item
+from common import header, header2, get_text_color, menu_item, enable
 from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
@@ -190,6 +190,8 @@ class TileEditor(ui.element):
     # combined brush
     dragging: bool = False
     dragging_on_pixel: bool = False
+    # display tile in 105 color mode
+    _105_color_mode: bool = False
     # display confirmation dialog when erasing pattern
     confirm_erasing: bool = True
     # hide background colour when pixel is visible and foreground colour when it's not
@@ -212,6 +214,7 @@ class TileEditor(ui.element):
     fg_color_refs: list[list[ui.element]]
     release_shift_left: asyncio.Event
     release_shift_right: asyncio.Event
+    odd_frame_tab: ui.element
     textarea: ui.textarea
 
 
@@ -257,22 +260,16 @@ class TileEditor(ui.element):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
                         with ui.column():
-                            with ui.column().classes('items-center w-full'):
-                                menu_item(ui.label('Copy to clipboard as')).classes('mt-4')
-                                self.clipboard_toggle = ui.toggle({title:'' for title in COPY_TO_CLIPBOARD_FORMATS.keys()},
-                                        value='index', on_change=self.on_set_copy_format)
-                                for i, key in enumerate(COPY_TO_CLIPBOARD_FORMATS.keys(), start=1):
-                                    with ui.teleport(f'#{self.clipboard_toggle.html_id} > button:nth-child({i}) .q-btn__content ') as div:
-                                        with ui.element('div').tooltip(COPY_TO_CLIPBOARD_FORMATS[key]['tooltip']).classes('flex items-center gap-2'):
-                                            ui.icon(COPY_TO_CLIPBOARD_FORMATS[key]['icon'])
-                                            ui.label(key)
-
+                            text = 'render tile in 105 color mode'
+                            self._105_color_mode_switch = menu_item(
+                                    ui.switch('105 color mode', value=self._105_color_mode,
+                                            on_change=self.on_toggle_105_color_mode)).tooltip(text)
                             text = 'display confirmation dialog before erasing the tile'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
-                                      on_change=self.toggle_confirm_erasing)).tooltip(text)
+                                    on_change=self.on_toggle_confirm_erasing)).tooltip(text)
                             text = 'hide background pixel when foreground pixel is visible'
                             menu_item(ui.switch('Activate background occlusion', value=self.background_occlusion,
-                                      on_change=self.toggle_background_occlusion)).tooltip(text)
+                                    on_change=self.on_toggle_background_occlusion)).tooltip(text)
                 header(self.title)
 
             with ui.row().classes('w-full items-start gap-8 flex-nowrap'):
@@ -290,7 +287,9 @@ class TileEditor(ui.element):
                                 .tooltip('Change pixel grid size')
                     with ui.tabs() as tabs:
                         ui.tab('0', label='Even frame')
-                        ui.tab('1', label='Odd frame')
+                        self. odd_frame_tab = enable(
+                            ui.tab('1', label='Odd frame'), self._105_color_mode
+                        )
 
                     with ui.tab_panels(tabs, value='0').classes('w-full'):
                         with ui.tab_panel('0').classes('p-0 m-0'):
@@ -429,12 +428,18 @@ class TileEditor(ui.element):
                     if sel & 2: self.last_bg_button = button
 
 
-    def toggle_confirm_erasing(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+    def on_toggle_105_color_mode(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+        if event.value is not None:
+            self._105_color_mode = event.value
+            enable(self.odd_frame_tab, event.value)
+
+
+    def on_toggle_confirm_erasing(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         if event.value is not None:
             self.confirm_erasing = event.value
 
 
-    def toggle_background_occlusion(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
+    def on_toggle_background_occlusion(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         if event.value is not None:
             self.background_occlusion = event.value
             self.repaint()
