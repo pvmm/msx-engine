@@ -2,8 +2,8 @@ import json
 import urllib.parse
 
 from nicegui import ui, events
-from nicegui.elements.interactive_image import InteractiveImage
-from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, TileNxN, grid_to_svg
+from common import InteractiveImage
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, TileNxN
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
@@ -41,29 +41,6 @@ class MetatileEditor:
             self.parent.props('enabled')
         else:
             self.parent.props('disabled')
-
-
-class UiMetatile(InteractiveImage):
-    """Represents a metatile in the UI, allowing to display and select/unselect it."""
-    grid: TileNxN
-
-    def __init__(self, data: str | TileNxN | None = None, scale: int = 5):
-        super().__init__()
-        self.scale = scale
-        if not data:
-            grid = TileNxN(DEFAULT_FG_COLOR, DEFAULT_BG_COLOR)
-        elif isinstance(data, TileNxN):
-            grid = data
-        else:
-            # Convert from json string
-            grid = json.loads(data)
-        self.reload(grid)
-
-
-    def reload(self, grid: TileNxN) -> None:
-        self.grid = grid
-        data = grid_to_svg(self.grid, self.scale)
-        self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))
 
 
 class StageEditor(ui.row):
