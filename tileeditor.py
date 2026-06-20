@@ -5,7 +5,7 @@ from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
-from common import header, header2, get_text_color, menu_item, enable
+from common import header, header2, get_text_color, menu_item, enable, UiMetatile
 from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
@@ -215,6 +215,7 @@ class TileEditor(ui.element):
     release_shift_left: asyncio.Event
     release_shift_right: asyncio.Event
     odd_frame_tab: ui.element
+    metatile: UiMetatile
     textarea: ui.textarea
 
 
@@ -279,12 +280,9 @@ class TileEditor(ui.element):
                     self.build_palette()
                 # right side panels: grids and export tools
                 with ui.column().classes('w-full gap-0'):
-                    with ui.row().classes('w-full gap-1 flex-nowrap'):
-                        header2('Grid')
-                        size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
-                        ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
-                                .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px') \
-                                .tooltip('Change grid pixel size')
+                    header2('Result')
+                    self.metatile = UiMetatile(self.grid, PALETTE) \
+                        .on('click', lambda: self.metatile.reload(self.grid))
                     with ui.tabs() as tabs:
                         ui.tab('0', label='Even frame')
                         self. odd_frame_tab = enable(
@@ -296,6 +294,11 @@ class TileEditor(ui.element):
                             self.build_grid()
                         with ui.tab_panel('1').classes('p-0 m-0'):
                             self.build_grid()
+
+                    size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
+                    ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
+                            .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px') \
+                            .tooltip('Change grid pixel size')
 
                     self.textarea = ui.textarea(label='Exported metatile data', value='') \
                             .props('readonly').classes('w-full')
@@ -558,6 +561,7 @@ class TileEditor(ui.element):
 
     def on_undrag_on_grid(self, event: events.GenericEventArguments, x: int, y: int) -> None:
         self.old_buttons = event.args['buttons']
+        self.metatile.reload(self.grid)
         self.dragging = False
 
 
