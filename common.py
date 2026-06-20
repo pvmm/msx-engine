@@ -108,7 +108,7 @@ def menu_item(element: ui.element) -> ui.element:
     return element.classes('mx-4')
 
 
-def enable(element: DisableableElement | ui.element, status: bool = True) -> None:
+def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.element:
     """Enable/disable an element for any type of ui.element"""
     if isinstance(element, DisableableElement):
         if status:
@@ -123,4 +123,5 @@ def enable(element: DisableableElement | ui.element, status: bool = True) -> Non
             element._props.pop('disabled')
         else:
             element.props('disabled')
+    return element
 
