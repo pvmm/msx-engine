@@ -373,7 +373,8 @@ class TileEditor(ui.element):
 
                 ui.separator()
 
-                ui.button(icon='fa-solid fa-trash fa-lg', on_click=self.on_clear_tile).props('color=red').tooltip('erase tile completely')
+                text = 'erase metatile completely and set background to current background color'
+                ui.button(icon='fa-solid fa-trash fa-lg', on_click=self.on_clear_tile).props('color=red').tooltip(text)
 
 
     def build_grid(self) -> None:
