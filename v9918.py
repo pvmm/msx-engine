@@ -29,30 +29,6 @@ def combine_colors(fg_color: int, bg_color: int) -> int:
     return ((fg_color << 4) & 0xf0) | (bg_color & 0x0f)
 
 
-def grid_to_svg(grid: TileNxN | list[list[int]], scale: int = 20) -> str:
-    width = len(grid[0])
-    height = len(grid)
-
-    svg = [ f'''<svg xmlns="http://www.w3.org/2000/svg"
-            width="{width * scale}"
-            height="{height * scale}">''' ]
-    for y in range(height):
-        for x in range(width):
-            fg = select_fg(grid[y][x])
-            bg = select_bg(grid[y][x])
-            svg.append(
-                f'<rect '
-                f'x="{x * scale}" '
-                f'y="{y * scale}" '
-                f'width="{scale}" '
-                f'height="{scale}" '
-                f'fill="{PALETTE[fg or bg]}" '
-                f'stroke="#444"/>'
-            )
-    svg.append('</svg>')
-    return ''.join(svg)
-
-
 # classes
 class RowN:
     pattern: list[bool]
