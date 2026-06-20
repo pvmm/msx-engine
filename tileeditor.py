@@ -276,10 +276,33 @@ class TileEditor(ui.element):
                 header(self.title)
 
             with ui.row().classes('w-full items-start gap-8 flex-nowrap'):
+                # left side panel: tools and palette
                 with ui.column().style('width: 180px;'):
                     self.build_tools()
                     self.build_palette()
-                self.build_grid()
+                # right side panels: grids and export tools
+                with ui.column().classes('w-full gap-0'):
+                    with ui.row().classes('w-full gap-1 flex-nowrap'):
+                        header2('Grid')
+                        size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
+                        ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
+                                .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px') \
+                                .tooltip('Change grid pixel size')
+                    with ui.tabs() as tabs:
+                        ui.tab('0', label='Even frame')
+                        ui.tab('1', label='Odd frame')
+
+                    with ui.tab_panels(tabs, value='0').classes('w-full'):
+                        with ui.tab_panel('0').classes('p-0 m-0'):
+                            self.build_grid()
+                        with ui.tab_panel('1').classes('p-0 m-0'):
+                            self.build_grid()
+
+                    self.textarea = ui.textarea(label='Exported metatile data', value='') \
+                            .props('readonly').classes('w-full')
+                    with ui.row().classes('gap-2'):
+                        ui.button('Export Hex', on_click=self.on_export_hex_clicked)
+                        ui.button('Export RGB', on_click=self.on_export_rgb_clicked)
 
 
     def build_tools(self) -> None:
@@ -352,32 +375,19 @@ class TileEditor(ui.element):
 
 
     def build_grid(self) -> None:
-        with ui.column().classes('w-full gap-0'):
-            with ui.row().classes('w-full gap-1 flex-nowrap'):
-                header2('Grid')
-                size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
-                ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
-                        .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px')
-            with ui.column().classes('gap-0 min-w-[250px] w-full flex-nowrap').style('width: 100%;'):
-                with ui.scroll_area().classes('w-full p-0 m-0'):
-                    with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap').style('background-color: #ccc;'):
-                        for y in range(len(self.grid)):
-                            row_refs: list[UiPixel] = []
-                            with ui.row().classes('w-full gap-0 p-0 m-0 items-center flex-nowrap'):
-                                for x in range(len(self.grid[0])):
-                                    pixel = UiPixel(True if self.grid.get_pixel(x, y) else False, *self.grid[y].get_colors(x))
-                                    pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                    pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
-                                    pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                    row_refs.append(pixel)
-                            self.pixel_refs.append(row_refs)
-
-            self.textarea = ui.textarea(label='Exported metatile data', value='') \
-                    .props('readonly').classes('w-full')
-
-            with ui.row().classes('gap-2'):
-                ui.button('Export Hex', on_click=self.on_export_hex_clicked)
-                ui.button('Export RGB', on_click=self.on_export_rgb_clicked)
+        with ui.column().classes('gap-0 m-0 p-0 min-w-[250px] w-full flex-nowrap').style('width: 100%;'):
+            with ui.scroll_area().classes('w-full p-0 m-0'):
+                with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap').style('background-color: #ccc;'):
+                    for y in range(len(self.grid)):
+                        row_refs: list[UiPixel] = []
+                        with ui.row().classes('w-full gap-0 p-0 m-0 items-center flex-nowrap'):
+                            for x in range(len(self.grid[0])):
+                                pixel = UiPixel(True if self.grid.get_pixel(x, y) else False, *self.grid[y].get_colors(x))
+                                pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
+                                pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                                row_refs.append(pixel)
+                        self.pixel_refs.append(row_refs)
 
 
     def on_export_hex_clicked(self, event: events.ClickEventArguments) -> None:
