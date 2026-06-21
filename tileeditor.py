@@ -205,6 +205,7 @@ class TileEditor(ui.element):
     shift_right_released: bool = False
 
     # ui elements
+    tabs: ui.tab_panels
     patternbrush: ui.button
     colorbrush: ui.button
     eraser: ui.button
@@ -260,7 +261,7 @@ class TileEditor(ui.element):
             with ui.row().classes('items-center flex-nowrap'):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
-                        with ui.column():
+                        with ui.column().classes('p-3'):
                             text = 'render tile in 105 color mode'
                             self._105_color_mode_switch = menu_item(
                                     ui.switch('105 color mode', value=self._105_color_mode,
@@ -289,7 +290,7 @@ class TileEditor(ui.element):
                             ui.tab('1', label='Odd frame'), self._105_color_mode
                         )
 
-                    with ui.tab_panels(tabs, value='0').classes('w-full'):
+                    with ui.tab_panels(tabs, value='0').classes('w-full') as self.tabs:
                         with ui.tab_panel('0').classes('p-0 m-0'):
                             self.build_grid()
                         with ui.tab_panel('1').classes('p-0 m-0'):
@@ -435,6 +436,7 @@ class TileEditor(ui.element):
     def on_toggle_105_color_mode(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
         if event.value is not None:
             self._105_color_mode = event.value
+            self.tabs.set_value('0')
             enable(self.odd_frame_tab, event.value)
 
 
