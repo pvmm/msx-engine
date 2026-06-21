@@ -1,11 +1,12 @@
 import json
 import asyncio
+import common
 
 from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
-from common import header, header2, get_text_color, menu_item, enable, UiMetatile
+from common import header, header2, get_text_color, menu_item, enable, UiMetatile, subscribe_to_resize_event
 from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
@@ -210,6 +211,8 @@ class TileEditor(ui.element):
     colorbrush: ui.button
     eraser: ui.button
     inverter: ui.button
+    odd_grid_container: ui.scroll_area
+    even_grid_container: ui.scroll_area
     pixel_refs: list[list[UiPixel]]
     bg_color_refs: list[list[ui.element]]
     fg_color_refs: list[list[ui.element]]
@@ -266,7 +269,7 @@ class TileEditor(ui.element):
                             self._105_color_mode_switch = menu_item(
                                     ui.switch('105 color mode', value=self._105_color_mode,
                                             on_change=self.on_toggle_105_color_mode)).tooltip(text)
-                            text = 'display confirmation dialog before erasing the tile'
+                            text = 'display a confirmation dialog before erasing the tile data'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
                                     on_change=self.on_toggle_confirm_erasing)).tooltip(text)
                             text = 'hide background pixel when foreground pixel is visible'
@@ -292,9 +295,9 @@ class TileEditor(ui.element):
 
                     with ui.tab_panels(tabs, value='0').classes('w-full') as self.tabs:
                         with ui.tab_panel('0').classes('p-0 m-0'):
-                            self.build_grid()
+                            self.odd_grid_container = self.build_grid(self.grid)
                         with ui.tab_panel('1').classes('p-0 m-0'):
-                            self.build_grid()
+                            self.even_grid_container = self.build_grid(self.grid)
 
                     size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
                     ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
@@ -378,20 +381,20 @@ class TileEditor(ui.element):
                 ui.button(icon='fa-solid fa-trash fa-lg', on_click=self.on_clear_tile).props('color=red').tooltip(text)
 
 
-    def build_grid(self) -> None:
-        with ui.column().classes('gap-0 m-0 p-0 min-w-[250px] w-full flex-nowrap').style('width: 100%;'):
-            with ui.scroll_area().classes('w-full p-0 m-0'):
-                with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap').style('background-color: #ccc;'):
-                    for y in range(len(self.grid)):
-                        row_refs: list[UiPixel] = []
-                        with ui.row().classes('w-full gap-0 p-0 m-0 items-center flex-nowrap'):
-                            for x in range(len(self.grid[0])):
-                                pixel = UiPixel(True if self.grid.get_pixel(x, y) else False, *self.grid[y].get_colors(x))
-                                pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
-                                pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
-                                row_refs.append(pixel)
-                        self.pixel_refs.append(row_refs)
+    def build_grid(self, grid) -> ui.column:
+        with ui.scroll_area().classes('gap-0 w-full p-0 m-0').style(f'height: 500px; background-color: #ccc;') as container:
+            with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap'):
+                for y in range(len(grid)):
+                    row_refs: list[UiPixel] = []
+                    with ui.row().classes('w-full gap-0 p-0 m-0 items-center flex-nowrap'):
+                        for x in range(len(grid[0])):
+                            pixel = UiPixel(True if grid.get_pixel(x, y) else False, *grid[y].get_colors(x))
+                            pixel.on('mousedown', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                            pixel.on('mouseup', lambda e, px=x, py=y: self.on_undrag_on_grid(e, px, py))
+                            pixel.on('mouseover', lambda e, px=x, py=y: self.on_drag_on_grid(e, px, py))
+                            row_refs.append(pixel)
+                    self.pixel_refs.append(row_refs)
+        return container
 
 
     def on_export_hex_clicked(self, event: events.ClickEventArguments) -> None:
@@ -685,7 +688,7 @@ class TileEditor(ui.element):
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    grid = TileNxN(15, 1, 32, 16)
+    grid = TileNxN(15, 1, 32, 32)
     TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
     from common import run
     run()
