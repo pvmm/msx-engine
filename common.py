@@ -12,13 +12,21 @@ from nicegui.elements.interactive_image import InteractiveImage
 # app-wide globals
 SCREEN_WIDTH: int = 0
 SCREEN_HEIGHT: int = 0
+resize_event_subscribers = {}
+
+
+def subscribe_to_resize_event(name: str, function: any) -> None:
+    print(f'subscribe_to_resize_event({function})')
+    if not name in resize_event_subscribers:
+        resize_event_subscribers.update({name: function})
 
 
 def screen_resize(e: events.GenericEventArguments) -> None:
-    global SCREEN_WIDTH
-    global SCREEN_HEIGHT
+    global SCREEN_WIDTH, SCREEN_HEIGHT
     SCREEN_WIDTH = e.args['width']
     SCREEN_HEIGHT = e.args['height']
+    for name, function in resize_event_subscribers.items():
+        function()
 
 
 def run() -> None:
@@ -28,19 +36,7 @@ def run() -> None:
     # Inject your personal Font Awesome Kit script into the document head
     ui.add_head_html('<link rel="stylesheet" href="static/css/all.min.css">', shared=True)
 
-    # Get window size
-    ui.add_head_html('''
-        <script>
-        function emitSize() {
-            emitEvent('resize', {
-                width: document.body.offsetWidth,
-                height: document.body.offsetHeight,
-            });
-        }
-        window.onload = emitSize;
-        window.onresize = emitSize;
-        </script>
-    ''')
+    # Get noticed when window size change
     ui.on('resize', lambda e: screen_resize(e))
 
     # Change tooltip size
