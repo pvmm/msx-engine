@@ -2,12 +2,11 @@ import json
 import urllib.parse
 
 from nicegui import ui, events
-from common import InteractiveImage
 from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, TileNxN
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
-from common import header, get_text_color, enable
+from common import header, get_text_color, enable, UiMetatile
 
 
 TILE_PIXEL_SIZE = 12
@@ -67,7 +66,7 @@ class StageEditor(ui.row):
         self.project_tiles_row.clear()
         with self.project_tiles_row:
             for metatile in self.project_tiles:
-                UiMetatile(metatile.grid)
+                UiMetatile(metatile.grid, PALETTE)
         print('done!')
 
 
@@ -81,7 +80,7 @@ class StageEditor(ui.row):
 
     def add_metatile(self, bgcolor_index: int) -> UiMetatile:
         with self.metatiles_row:
-            metatile = UiMetatile(grid_to_svg(TileNxN(15, bgcolor_index), 5)) \
+            metatile = UiMetatile(TileNxN(15, bgcolor_index), PALETTE) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
             return metatile
 

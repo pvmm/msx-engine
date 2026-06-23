@@ -3,19 +3,22 @@ import os
 import json
 import urllib
 
+from collections.abc import Callable
 from typing import Any
 from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
 from nicegui.elements.interactive_image import InteractiveImage
 
+from v9918 import TileNxN
+
 
 # app-wide globals
 SCREEN_WIDTH: int = 0
 SCREEN_HEIGHT: int = 0
-resize_event_subscribers = {}
+resize_event_subscribers: dict[str, Callable[[], None]] = {}
 
 
-def subscribe_to_resize_event(name: str, function: any) -> None:
+def subscribe_to_resize_event(name: str, function: Callable[[], None]) -> None:
     print(f'subscribe_to_resize_event({function})')
     if not name in resize_event_subscribers:
         resize_event_subscribers.update({name: function})
@@ -47,7 +50,7 @@ def run() -> None:
         .no-select {
             user-select: none;
         }
-    ''')
+    ''', shared=True)
 
     # Remove default scroll_area padding
     ui.add_css('''
@@ -69,7 +72,7 @@ def run() -> None:
             background: #444;
             border-radius: 6px;
         }
-    ''')
+    ''', shared=True)
 
     ui.run(title='NiceGUI Tile Editor') 
     
@@ -155,7 +158,7 @@ class UiMetatile(InteractiveImage):
     scale: int
     palette: list[str]
 
-    def __init__(self, data: object | str | bytes | list[list[int]], palette: list[str], scale: int = 5):
+    def __init__(self, data: TileNxN | str | bytes | list[list[int]], palette: list[str], scale: int = 5):
         grid: Any
         super().__init__()
         self.palette = palette
@@ -170,7 +173,7 @@ class UiMetatile(InteractiveImage):
         self.reload(grid)
 
 
-    def reload(self, grid: object | str | bytes | list[list[int]]) -> None:
+    def reload(self, grid: TileNxN | list[list[int]]) -> None:
         self.grid = grid
         data = grid_to_svg(grid, self.palette, self.scale)
         self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))

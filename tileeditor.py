@@ -69,7 +69,7 @@ class UiPixel(ui.card):
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
-    ''')
+    ''', shared=True)
 
 
     def __init__(self, value: bool, fg: int | None = None, bg: int | None = None, scale: int | None = None):
@@ -183,6 +183,7 @@ class ColorButton(ui.button):
 
 class TileEditor(ui.element):
     title: str
+    grid: TileNxN
     current_fg_color: int = DEFAULT_FG_COLOR
     current_bg_color: int = DEFAULT_BG_COLOR
     last_fg_button: ColorButton
@@ -381,7 +382,7 @@ class TileEditor(ui.element):
                 ui.button(icon='fa-solid fa-trash fa-lg', on_click=self.on_clear_tile).props('color=red').tooltip(text)
 
 
-    def build_grid(self, grid) -> ui.column:
+    def build_grid(self, grid: TileNxN) -> ui.scroll_area:
         with ui.scroll_area().classes('gap-0 w-full p-0 m-0').style(f'height: 500px; background-color: #ccc;') as container:
             with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap'):
                 for y in range(len(grid)):
