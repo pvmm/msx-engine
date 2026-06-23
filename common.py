@@ -32,6 +32,11 @@ def screen_resize(e: events.GenericEventArguments) -> None:
         function()
 
 
+def add_handlers() -> None:
+    # Get noticed when window size change
+    ui.on('resize', lambda e: screen_resize(e))
+
+
 def run() -> None:
     # Add static directory
     app.add_static_files('/static', os.path.join(os.path.dirname(__file__), 'static'))
@@ -41,9 +46,6 @@ def run() -> None:
         '<script src="https://kit.fontawesome.com/dd0877df2c.js" crossorigin="anonymous"></script>',
         shared=True
     )
-
-    # Get noticed when window size change
-    ui.on('resize', lambda e: screen_resize(e))
 
     # Change tooltip size
     ui.add_css('''
