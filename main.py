@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from stageeditor import UiMetatile
+
+from nicegui import ui
+from common import UiMetatile
+
+from stageeditor import StageEditor
 
 
 stage_editor: StageEditor
