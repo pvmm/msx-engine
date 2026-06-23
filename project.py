@@ -388,8 +388,12 @@ class Project:
                                 """
 
 
-if __name__ in {"__main__", "__mp_main__"}:
+@ui.page('/')
+def main() -> None:
     alist: list[UiMetatile] = []
     Project(ui.column().classes('w-full min-h-screen p-0 m-0'), alist)
+
+
+if __name__ in {"__main__", "__mp_main__"}:
     from common import run
     run()

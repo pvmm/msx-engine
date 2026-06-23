@@ -15,7 +15,8 @@ def update_stage_editor() -> None:
         stage_editor.update_tiles()
 
 
-if __name__ in {'__main__', '__mp_main__'}:
+@ui.page('/')
+def main() -> None:
     background_tiles: list[UiMetatile] = []
 
     from nicegui import ui
@@ -34,5 +35,7 @@ if __name__ in {'__main__', '__mp_main__'}:
         with ui.tab_panel('a'):
             ui.label('Infos')
 
+
+if __name__ in {'__main__', '__mp_main__'}:
     from common import run
     run()
