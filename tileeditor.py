@@ -284,32 +284,38 @@ class TileEditor(ui.element):
                     self.build_tools()
                     self.build_palette()
                 # right side panels: grids and export tools
-                with ui.column().classes('w-full gap-0'):
+                with ui.column().classes('w-full gap-0 h-[calc(90vh)]').style('border: 1px solid #444;'):
                     header2('Result')
                     self.metatile = UiMetatile(self.grid, PALETTE) \
                         .on('click', lambda: self.metatile.reload(self.grid))
-                    with ui.tabs() as tabs:
-                        ui.tab('0', label='Even frame')
-                        self. odd_frame_tab = enable(
-                            ui.tab('1', label='Odd frame'), self._105_color_mode
-                        )
 
-                    with ui.tab_panels(tabs, value='0').classes('w-full') as self.tabs:
-                        with ui.tab_panel('0').classes('p-0 m-0'):
-                            self.odd_grid_container = self.build_grid(self.grid)
-                        with ui.tab_panel('1').classes('p-0 m-0'):
-                            self.even_grid_container = self.build_grid(self.grid)
+                    with ui.splitter(horizontal=True, value=60).classes('w-full h-full') as splitter:
+                        with splitter.before:
+                            with ui.tabs() as tabs:
+                                ui.tab('0', label='Even frame')
+                                self. odd_frame_tab = enable(
+                                    ui.tab('1', label='Odd frame'), self._105_color_mode
+                                )
+                            with ui.tab_panels(tabs, value='0').classes('w-full') as self.tabs:
+                                with ui.tab_panel('0').classes('p-0 m-0'):
+                                    self.odd_grid_container = self.build_grid(self.grid)
+                                with ui.tab_panel('1').classes('p-0 m-0'):
+                                    self.even_grid_container = self.build_grid(self.grid)
 
-                    size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
-                    ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
-                            .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px') \
-                            .tooltip('Change pixel grid size')
+                        with splitter.after:
+                            size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
+                            ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
+                                    .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px') \
+                                    .tooltip('Change pixel grid size')
 
-                    self.textarea = ui.textarea(label='Exported metatile data', value='') \
-                            .props('readonly').classes('w-full')
-                    with ui.row().classes('gap-2'):
-                        ui.button('Export Hex', on_click=self.on_export_hex_clicked)
-                        ui.button('Export RGB', on_click=self.on_export_rgb_clicked)
+                            self.textarea = ui.textarea(label='Exported metatile data', value='') \
+                                    .props('readonly').classes('w-full')
+                            with ui.row().classes('gap-2'):
+                                ui.button('Export Hex', on_click=self.on_export_hex_clicked)
+                                ui.button('Export RGB', on_click=self.on_export_rgb_clicked)
+
+                        with splitter.separator:
+                            ui.icon('lightbulb').classes('text-green')
 
 
     def build_tools(self) -> None:
@@ -383,7 +389,8 @@ class TileEditor(ui.element):
 
 
     def build_grid(self, grid: TileNxN) -> ui.scroll_area:
-        with ui.scroll_area().classes('gap-0 w-full p-0 m-0').style(f'height: 500px; background-color: #ccc;') as container:
+        height = len(grid) * 30
+        with ui.scroll_area().classes('gap-0 w-full p-0 m-0').style(f'height: {height}px; background-color: #ccc;') as container:
             with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap'):
                 for y in range(len(grid)):
                     row_refs: list[UiPixel] = []
