@@ -688,8 +688,12 @@ class TileEditor(ui.element):
         self.repaint()
 
 
-if __name__ in {"__main__", "__mp_main__"}:
+@ui.page('/')
+def main() -> None:
     grid = TileNxN(15, 1, 32, 32)
     TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
+
+
+if __name__ in {"__main__", "__mp_main__"}:
     from common import run
     run()
