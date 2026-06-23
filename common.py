@@ -32,15 +32,17 @@ def screen_resize(e: events.GenericEventArguments) -> None:
         function()
 
 
+def add_handlers() -> None:
+    # Get noticed when window size change
+    ui.on('resize', lambda e: screen_resize(e))
+
+
 def run() -> None:
     # Add static directory
     app.add_static_files('/static', os.path.join(os.path.dirname(__file__), 'static'))
 
     # Inject your personal Font Awesome Kit script into the document head
     ui.add_head_html('<link rel="stylesheet" href="static/css/all.min.css">', shared=True)
-
-    # Get noticed when window size change
-    ui.on('resize', lambda e: screen_resize(e))
 
     # Change tooltip size
     ui.add_css('''

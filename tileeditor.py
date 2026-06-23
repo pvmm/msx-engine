@@ -6,7 +6,7 @@ from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
-from common import header, header2, get_text_color, menu_item, enable, UiMetatile, subscribe_to_resize_event
+from common import header, header2, get_text_color, menu_item, enable, UiMetatile, subscribe_to_resize_event, add_handlers
 from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
@@ -690,6 +690,7 @@ class TileEditor(ui.element):
 
 @ui.page('/')
 def main() -> None:
+    add_handlers()
     grid = TileNxN(15, 1, 32, 32)
     TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
 
