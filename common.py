@@ -6,7 +6,7 @@ from nicegui.elements.mixins.disableable_element import DisableableElement
 
 def run() -> None:
     # Inject your personal Font Awesome Kit script into the document head
-    ui.add_head_html('<script src="https://kit.fontawesome.com/dd0877df2c.js" crossorigin="anonymous"></script>')
+    ui.add_head_html('<link rel="stylesheet" href="static/css/all.min.css">', shared=True)
 
     # Change tooltip size
     ui.add_css('''
