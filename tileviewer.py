@@ -13,6 +13,13 @@ class TileViewer:
     image: Image;
     image64: str;
 
+    ui.add_css('''
+        .pixelated {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    ''', shared=True)
+
     def __init__(self, image: Image | None = None):
         self.zoom = 4
         self.selected_col = -1
@@ -34,7 +41,7 @@ class TileViewer:
 
             with ui.scroll_area().classes('w-full flex-1 border'):
                 ui.html(
-                    '<canvas id="tile_canvas"></canvas>'
+                    '<canvas id="tile_canvas" class="pixelated"></canvas>'
                 )
 
         ui.on("tile_clicked", self.on_tile_clicked)
