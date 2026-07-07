@@ -2,7 +2,9 @@
 import os
 import json
 import urllib
+import base64
 
+from io import BytesIO
 from collections.abc import Callable
 from typing import Any
 from nicegui import ui, events, app
@@ -16,6 +18,13 @@ from v9918 import TileNxN
 SCREEN_WIDTH: int = 0
 SCREEN_HEIGHT: int = 0
 resize_event_subscribers: dict[str, Callable[[], None]] = {}
+
+
+def file_to_base64(buffer: BytesIO) -> str:
+    #image = Image.open(BytesIO(image))
+    #image.save(buffer, format='PNG')
+    encoded = base64.b64encode(buffer.getvalue()).decode()
+    return f'data:image/png;base64,{encoded}'
 
 
 def subscribe_to_resize_event(name: str, function: Callable[[], None]) -> None:

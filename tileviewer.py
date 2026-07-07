@@ -1,95 +1,91 @@
-from nicegui import ui
+from nicegui import ui, app
 from PIL import Image
-from io import BytesIO
 import base64
-
-IMAGE_FILE = 'image.png'
+from io import BytesIO
+from common import run, add_handlers, file_to_base64
+from fileloader import FileLoader
 
 
 class TileViewer:
+    zoom: int;
+    selected_col = int;
+    selected_row = int;
+    image: Image;
+    image64: str;
 
-    def __init__(self):
-        self.zoom = 4  # each source pixel becomes 4x4 screen pixels
+    def __init__(self, image: Image | None = None):
+        self.zoom = 4
+        self.selected_col = -1
+        self.selected_row = -1
+        self.build_ui()
 
-        image = Image.open(IMAGE_FILE).convert('RGBA')
 
-        buffer = BytesIO()
-        image.save(buffer, format='PNG')
-        self.image_data = base64.b64encode(buffer.getvalue()).decode()
-
-        with ui.column().classes('w-full h-screen'):
-
+    def build_ui(self):
+        ui.add_head_html('<script src="/static/tileviewer.js"></script>', shared=True)
+        with ui.column().classes('w-full h-screen') as parent:
+            FileLoader(parent, self.load_image)
             ui.slider(
                 min=1,
                 max=16,
                 value=self.zoom,
                 step=1,
-                on_change=self.change_zoom,
-            ).props('label-always')
+                on_change=lambda e: self.set_zoom(int(e.value)),
+            )
 
             with ui.scroll_area().classes('w-full flex-1 border'):
-                ui.html('<canvas id="tile_canvas"></canvas>')
+                ui.html(
+                    '<canvas id="tile_canvas"></canvas>'
+                )
 
-        ui.timer(0.1, self.redraw, once=True)
+        ui.on("tile_clicked", self.on_tile_clicked)
+        #ui.timer(0.1, self.initialize, once=True)
 
-    def change_zoom(self, e):
-        self.zoom = int(e.value)
-        self.redraw()
 
-    def redraw(self):
+    def load_image(self, image: bytes):
+        self.image = Image.open(BytesIO(image))
+        buffer = BytesIO()
+        self.image.save(buffer, format='PNG')
+        self.image64 = file_to_base64(buffer)
 
         ui.run_javascript(f"""
-const canvas = document.getElementById('tile_canvas');
-const ctx = canvas.getContext('2d');
-
-const img = new Image();
-
-img.onload = function() {{
-
-    const zoom = {self.zoom};
-
-    canvas.width = img.width * zoom;
-    canvas.height = img.height * zoom;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.imageSmoothingEnabled = false;
-
-    // Draw enlarged image
-    ctx.drawImage(
-        img,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    // Draw grid
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-
-    // Vertical lines
-    for (let x = 0; x <= img.width; x += 8) {{
-        const xx = x * zoom + 0.5;
-        ctx.moveTo(xx, 0);
-        ctx.lineTo(xx, canvas.height);
-    }}
-
-    // Horizontal lines
-    for (let y = 0; y <= img.height; y += 8) {{
-        const yy = y * zoom + 0.5;
-        ctx.moveTo(0, yy);
-        ctx.lineTo(canvas.width, yy);
-    }}
-
-    ctx.stroke();
-}};
-
-img.src = 'data:image/png;base64,{self.image_data}';
-""")
+            window.tileViewer.initialize({{
+                canvasId: "tile_canvas",
+                image: "{self.image64}",
+                zoom: {self.zoom}
+            }});
+        """)
 
 
-TileViewer()
+    def redraw(self):
+        ui.run_javascript(f"""
+            window.tileViewer.setState({{
+                zoom: {self.zoom},
+                selectedCol: {self.selected_col},
+                selectedRow: {self.selected_row}
+            }});
+            window.tileViewer.draw();
+        """)
 
-ui.run()
+
+    def set_zoom(self, zoom):
+        self.zoom = zoom
+        self.redraw()
+
+
+    def on_tile_clicked(self, e):
+        self.selected_col = e.args["col"]
+        self.selected_row = e.args["row"]
+        print(self.selected_col, self.selected_row)
+        self.redraw()
+
+
+@ui.page('/')
+def main() -> None:
+    add_handlers()
+    #TileViewer(Image.open(IMAGE_FILE).convert('RGBA'))
+    TileViewer()
+
+
+if __name__ in {"__main__", "__mp_main__"}:
+    from common import run
+    run()
