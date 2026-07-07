@@ -1,4 +1,4 @@
-class TileViewer {
+TileViewer = class {
     initialize(options) {
         this.canvas = document.getElementById(options.canvasId);
         this.ctx = this.canvas.getContext("2d");
