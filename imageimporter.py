@@ -1,11 +1,14 @@
 
-from io import BytesIO
+import os
 import base64
 
+from io import BytesIO
 from PIL import Image
 from nicegui import ui, events
 from v9918 import TILE_SIZE
 
+
+port = int(os.getenv("PORT", 7860))
 
 def file_to_base64(image: Image.Image) -> str:
     buffer = BytesIO()
@@ -64,4 +67,8 @@ class FileLoader(ui.column):
 
 FileLoader(ui.column().classes('w-full'))
 
-ui.run()
+ui.run(
+    host="0.0.0.0",
+    port=port,
+    title="My NiceGUI App",
+)
