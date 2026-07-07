@@ -6,7 +6,7 @@ from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, TileNxN
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
-from common import header, get_text_color, enable, UiMetatile
+from common import header, get_text_color, enable, UiMetatile, add_handlers
 
 
 TILE_PIXEL_SIZE = 12
@@ -179,9 +179,14 @@ class StageEditor(ui.row):
         # self.add_background_tile(index, color)
 
 
-if __name__ in {"__main__", "__mp_main__"}:
-    from common import run
+@ui.page('/')
+def main() -> None:
+    add_handlers()
     with ui.row().classes('w-full'):
         alist: list[UiMetatile] = []
         StageEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), alist)
+
+
+if __name__ in {"__main__", "__mp_main__"}:
+    from common import run
     run()
