@@ -1,15 +1,17 @@
-from nicegui import ui, app
+from nicegui import ui, app, events
 from PIL import Image
 import base64
 from io import BytesIO
-from common import run, add_handlers, file_to_base64
+from common import run, add_handlers, file_to_base64, disable, enable
 from fileloader import FileLoader
 
 
 class TileViewer:
     zoom: int;
-    selected_col = int;
-    selected_row = int;
+    grid_width: int
+    grid_height: int
+    selected_x: int
+    selected_y: int
     image: Image;
     image64: str;
 
@@ -20,17 +22,30 @@ class TileViewer:
         }
     ''', shared=True)
 
+    # widgets
+    grid_width_number: ui.element
+    grid_height_number: ui.element
+
     def __init__(self, image: Image | None = None):
         self.zoom = 4
-        self.selected_col = -1
-        self.selected_row = -1
+        self.grid_width = 8
+        self.grid_height = 8
+        self.selected_x = -1
+        self.selected_y = -1
         self.build_ui()
 
 
     def build_ui(self):
         ui.add_head_html('<script src="/static/tileviewer.js"></script>', shared=True)
-        with ui.column().classes('w-full h-screen') as parent:
-            FileLoader(parent, self.load_image)
+        with ui.column().classes('w-full h-screen'):
+
+            with ui.row().classes('items-center flex-nowrap') as parent:
+                FileLoader(parent, self.load_image)
+                self.grid_width_number = disable(ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
+                          on_change=lambda e: self.on_change_grid_size('w', e)))
+                self.grid_height_number = disable(ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
+                          on_change=lambda e: self.on_change_grid_size('h', e)))
+
             ui.slider(
                 min=1,
                 max=16,
@@ -45,7 +60,6 @@ class TileViewer:
                 )
 
         ui.on("tile_clicked", self.on_tile_clicked)
-        #ui.timer(0.1, self.initialize, once=True)
 
 
     def load_image(self, image: bytes):
@@ -53,6 +67,8 @@ class TileViewer:
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
         self.image64 = file_to_base64(buffer)
+        enable(self.grid_width_number)
+        enable(self.grid_height_number)
 
         ui.run_javascript(f"""
             window.tileViewer.initialize({{
@@ -63,12 +79,22 @@ class TileViewer:
         """)
 
 
+    def on_change_grid_size(self, type: str, event: events.ValueChangeEventArguments[int | None]) -> None:
+        if self.image:
+            if type == 'w': self.grid_width = event.value
+            if type == 'h': self.grid_height = event.value
+            print('redraw!')
+            self.redraw()
+
+
     def redraw(self):
         ui.run_javascript(f"""
             window.tileViewer.setState({{
                 zoom: {self.zoom},
-                selectedCol: {self.selected_col},
-                selectedRow: {self.selected_row}
+                selectedX: {self.selected_x},
+                selectedY: {self.selected_y},
+                gridWidth: {self.grid_width},
+                gridHeight: {self.grid_height}
             }});
             window.tileViewer.draw();
         """)
@@ -80,9 +106,9 @@ class TileViewer:
 
 
     def on_tile_clicked(self, e):
-        self.selected_col = e.args["col"]
-        self.selected_row = e.args["row"]
-        print(self.selected_col, self.selected_row)
+        self.selected_x = e.args["col"] * self.grid_width
+        self.selected_y = e.args["row"] * self.grid_height
+        print(self.selected_x, self.selected_y)
         self.redraw()
 
 

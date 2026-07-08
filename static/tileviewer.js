@@ -4,8 +4,10 @@ TileViewer = class {
         this.ctx = this.canvas.getContext("2d");
         this.ctx.imageSmoothingEnabled = false;
         this.zoom = options.zoom;
-        this.selectedCol = -1;
-        this.selectedRow = -1;
+        this.gridWidth = 8;
+        this.gridHeight = 8;
+        this.selectedX = -1;
+        this.selectedY = -1;
         this.image = new Image();
         this.image.onload = () => {
             this.draw();
@@ -16,8 +18,10 @@ TileViewer = class {
 
     setState(state) {
         this.zoom = state.zoom;
-        this.selectedCol = state.selectedCol;
-        this.selectedRow = state.selectedRow;
+        this.selectedX = state.selectedX;
+        this.selectedY = state.selectedY;
+        this.gridWidth = state.gridWidth;
+        this.gridHeight = state.gridHeight;
     }
 
     draw() {
@@ -43,13 +47,13 @@ TileViewer = class {
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
 
-        for (let x = 0; x <= this.image.width; x += 8) {
+        for (let x = 0; x <= this.image.width; x += this.gridWidth) {
             let xx = x * this.zoom + 0.5;
             this.ctx.moveTo(xx, 0);
             this.ctx.lineTo(xx, this.canvas.height);
         }
 
-        for (let y = 0; y <= this.image.height; y += 8) {
+        for (let y = 0; y <= this.image.height; y += this.gridHeight) {
             let yy = y * this.zoom + 0.5;
             this.ctx.moveTo(0, yy);
             this.ctx.lineTo(this.canvas.width, yy);
@@ -65,17 +69,17 @@ TileViewer = class {
         this.ctx.strokeStyle = "#ff0000";
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(
-            this.selectedCol * 8 * this.zoom,
-            this.selectedRow * 8 * this.zoom,
-            8 * this.zoom,
-            8 * this.zoom
+            Math.floor(this.selectedX / this.gridWidth) * this.gridWidth * this.zoom,
+            Math.floor(this.selectedY / this.gridHeight) * this.gridHeight * this.zoom,
+            this.gridWidth * this.zoom,
+            this.gridHeight * this.zoom
         );
     }
 
     canvasToTile(x, y) {
         return {
-            col: Math.floor(x / (8 * this.zoom)),
-            row: Math.floor(y / (8 * this.zoom))
+            col: Math.floor(x / (this.gridWidth * this.zoom)),
+            row: Math.floor(y / (this.gridHeight * this.zoom))
         };
     }
 

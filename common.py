@@ -123,6 +123,11 @@ def menu_item(element: ui.element) -> ui.element:
     return element.classes('mx-4')
 
 
+def disable(element: DisableableElement | ui.element) -> ui.element:
+    """Short cut to disable an element for any type of ui.element"""
+    return enable(element, False)
+
+
 def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.element:
     """Enable/disable an element for any type of ui.element"""
     if isinstance(element, DisableableElement):
