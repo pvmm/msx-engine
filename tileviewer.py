@@ -40,7 +40,7 @@ class TileViewer:
         with ui.column().classes('w-full h-screen'):
 
             with ui.row().classes('items-end flex-nowrap') as parent:
-                FileLoader(parent, self.load_image)
+                FileLoader(parent, on_load=self.load_image)
                 self.grid_width_number = disable(ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
                           on_change=lambda e: self.on_change_grid_size('w', e),
                           validation={'metatile size mismatch': lambda value: self.image.size[0] % value == 0}))
