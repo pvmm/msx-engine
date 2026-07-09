@@ -132,6 +132,7 @@ class TileViewer:
 @ui.page('/')
 def main() -> None:
     add_handlers()
+    # load local file
     #TileViewer(Image.open(IMAGE_FILE).convert('RGBA'))
     TileViewer()
 
