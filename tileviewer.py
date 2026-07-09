@@ -2,8 +2,19 @@ from nicegui import ui, app, events
 from PIL import Image
 import base64
 from io import BytesIO
+
+import bmpto105
+from bmpto105 import BmpTo105
+
 from common import run, add_handlers, file_to_base64, disable, enable
 from fileloader import FileLoader
+
+
+PALETTE = [
+    (0, 0, 0), (0, 0, 0), (0x24, 0xda, 0x24), (0x68, 0xff, 0x68), (0x24, 0x24, 0xff), (0x48, 0x68, 0xff),
+    (0xb6, 0x24, 0x24), (0x48, 0xda, 0xff), (0xff, 0x24, 0x24), (0xff, 0x68, 0x68), (0xda, 0xda, 0x24),
+    (0xda, 0xda, 0x91), (0x24, 0x91, 0x24), (0xda, 0x48, 0xb6), (0xb6, 0xb6, 0xb6), (0xff, 0xff, 0xff)
+]
 
 
 class TileViewer:
@@ -27,6 +38,7 @@ class TileViewer:
     grid_height_number: ui.element
 
     def __init__(self, image: Image | None = None):
+        self.engine = BmpTo105(PALETTE)
         self.zoom = 4
         self.grid_width = 8
         self.grid_height = 8
@@ -64,8 +76,11 @@ class TileViewer:
         ui.on("tile_clicked", self.on_tile_clicked)
 
 
-    def load_image(self, image: bytes):
-        self.image = Image.open(BytesIO(image))
+    def load_image(self, data: bytes):
+        image = Image.open(BytesIO(data))
+        self.msx_image = self.engine.convert(image)
+        self.image = bmpto105.process(self.msx_image)
+
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
         self.image64 = file_to_base64(buffer)
