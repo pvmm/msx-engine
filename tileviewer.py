@@ -39,12 +39,14 @@ class TileViewer:
         ui.add_head_html('<script src="/static/tileviewer.js"></script>', shared=True)
         with ui.column().classes('w-full h-screen'):
 
-            with ui.row().classes('items-center flex-nowrap') as parent:
+            with ui.row().classes('items-end flex-nowrap') as parent:
                 FileLoader(parent, self.load_image)
                 self.grid_width_number = disable(ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
-                          on_change=lambda e: self.on_change_grid_size('w', e)))
+                          on_change=lambda e: self.on_change_grid_size('w', e),
+                          validation={'metatile size mismatch': lambda value: self.image.size[0] % value == 0}))
                 self.grid_height_number = disable(ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
-                          on_change=lambda e: self.on_change_grid_size('h', e)))
+                          on_change=lambda e: self.on_change_grid_size('h', e),
+                          validation={'metatile size mismatch': lambda value: self.image.size[1] % value == 0}))
 
             ui.slider(
                 min=1,
