@@ -1,4 +1,5 @@
 
 TODO
 
-* [ ] Extend tile editor to edit metatiles;
+* [x] Extend tile editor to edit metatiles;
+* [ ] Open metatiles in tile editor;
