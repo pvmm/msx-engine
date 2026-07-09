@@ -79,7 +79,7 @@ class TileViewer:
     def load_image(self, data: bytes):
         image = Image.open(BytesIO(data))
         self.msx_image = self.engine.convert(image)
-        self.image = bmpto105.process(self.msx_image)
+        self.image = self.msx_image.to_image()
 
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
