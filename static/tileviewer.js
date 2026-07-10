@@ -98,12 +98,25 @@ TileViewer = class {
 
         this.canvas.addEventListener("click", e => {
             const rect = this.canvas.getBoundingClientRect();
-            const tile = this.canvasToTile(
-                e.clientX - rect.left,
-                e.clientY - rect.top
-            );
-            emitEvent("tile_clicked", tile);
+            const event = {
+                button: e.button,
+                ...this.canvasToTile(
+                    e.clientX - rect.left,
+                    e.clientY - rect.top
+            )};
+            emitEvent("tile_clicked", event);
         }, { signal });
+
+        this.canvas.addEventListener("contextmenu", e => {
+            const rect = this.canvas.getBoundingClientRect();
+            const event = {
+                button: e.button,
+                ...this.canvasToTile(
+                    e.clientX - rect.left,
+                    e.clientY - rect.top
+            )};
+            emitEvent("tile_clicked", event);
+	}, { signal });
     }
 
     removeEvents() {

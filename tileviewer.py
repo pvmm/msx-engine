@@ -11,7 +11,7 @@ from common import run, add_handlers, file_to_base64, disable, enable
 
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
-from datatypes import Tile
+from datatypes import Tile, from_105_to_metatiles
 from tileeditor import TileEditor
 
 
@@ -75,8 +75,9 @@ class TileViewer:
             )
 
             with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
-                canvas = (ui.element('canvas').props('id=tile_canvas')
-                    .on('contextmenu.prevent', lambda: None))
+                canvas = (
+                    ui.element('canvas').props('id=tile_canvas').on('contextmenu.prevent', lambda: None)
+                )
 
         ui.on("tile_clicked", self.on_tile_clicked)
 
@@ -138,11 +139,11 @@ class TileViewer:
         self.selected_x = e.args['col'] * self.grid_width
         self.selected_y = e.args['row'] * self.grid_height
         self.redraw()
-        tile = self.msx.tile(e.args['col'], e.args['row'] * self.grid_height, self.grid_width // 8, self.grid_height)
+        #tile = self.msx.tile(e.args['col'], e.args['row'] * self.grid_height, self.grid_width // 8, self.grid_height)
+        metatiles = from_105_to_metatiles(self.msx.to_metatiles())
 
         width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image.size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
-            metatiles = self.msx.to_metatiles()
             editor = TileEditor(parent, metatiles)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
