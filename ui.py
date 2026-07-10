@@ -3,7 +3,8 @@ import urllib
 from nicegui import ui
 from nicegui.elements.interactive_image import InteractiveImage
 
-from v9918 import Tile, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
+from datatypes import Tile
+from v9918 import DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
 
 
 class UiPixel(ui.card):

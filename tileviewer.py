@@ -11,8 +11,8 @@ from common import run, add_handlers, file_to_base64, disable, enable
 
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
+from datatypes import Tile
 from tileeditor import TileEditor
-from v9918 import Tile
 
 
 PALETTE = [

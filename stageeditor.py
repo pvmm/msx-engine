@@ -2,7 +2,8 @@ import json
 import urllib.parse
 
 from nicegui import ui, events
-from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile
+from datatypes import Tile
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR

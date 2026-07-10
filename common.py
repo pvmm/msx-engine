@@ -7,7 +7,7 @@ from collections.abc import Callable
 from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
 
-from v9918 import Tile
+from datatypes import Tile
 
 
 # app-wide globals
@@ -85,13 +85,13 @@ def run() -> None:
     
 
 def header(text: str) -> ui.element:
-    'Common header format'
+    'first header format'
     with ui.element('div'):
         return ui.label(text).classes('text-2xl font-semibold')
 
 
 def header2(text: str) -> ui.element:
-    'Common header format'
+    'second header format'
     return ui.label(text).classes('text-lg font-semibold')
 
 
