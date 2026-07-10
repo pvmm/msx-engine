@@ -68,9 +68,9 @@ class TileViewer:
                 on_change=lambda e: self.set_zoom(int(e.value)),
             )
 
-            with ui.scroll_area().classes('w-full flex-1 border bg-gray-200'):
-                with ui.element('canvas').props('id=tile_canvas') as canvas:
-                    canvas.on('contextmenu.prevent', lambda: None)
+            with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
+                canvas = (ui.element('canvas').props('id=tile_canvas')
+                    .on('contextmenu.prevent', lambda: None))
 
         ui.on("tile_clicked", self.on_tile_clicked)
 
@@ -130,10 +130,11 @@ class TileViewer:
 
 
     def on_tile_clicked(self, e):
-        self.selected_x = e.args["col"] * self.grid_width
-        self.selected_y = e.args["row"] * self.grid_height
-        print(self.selected_x, self.selected_y)
+        self.selected_x = e.args['col'] * self.grid_width
+        self.selected_y = e.args['row'] * self.grid_height
         self.redraw()
+        tile = self.msx_image.tile(e.args['col'], e.args['row'], self.grid_width, self.grid_height)
+        TileEditor(tile)
 
 
 @ui.page('/')

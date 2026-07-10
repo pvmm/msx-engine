@@ -11,7 +11,7 @@ from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
 from nicegui.elements.interactive_image import InteractiveImage
 
-from v9918 import TileNxN
+from v9918 import Tile
 
 
 # app-wide globals
@@ -146,7 +146,7 @@ def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.
     return element
 
 
-def grid_to_svg(grid: TileNxN | list[list[int]], palette: list[str], scale: int = 20) -> str:
+def grid_to_svg(grid: Tile | list[list[int]], palette: list[str], scale: int = 20) -> str:
     width = len(grid[0])
     height = len(grid)
 
@@ -174,7 +174,7 @@ class UiMetatile(InteractiveImage):
     scale: int
     palette: list[str]
 
-    def __init__(self, data: TileNxN | str | bytes | list[list[int]], palette: list[str], scale: int = 5):
+    def __init__(self, data: Tile | str | bytes | list[list[int]], palette: list[str], scale: int = 5):
         grid: Any
         super().__init__()
         self.palette = palette
@@ -189,7 +189,7 @@ class UiMetatile(InteractiveImage):
         self.reload(grid)
 
 
-    def reload(self, grid: TileNxN | list[list[int]]) -> None:
+    def reload(self, grid: Tile | list[list[int]]) -> None:
         self.grid = grid
         data = grid_to_svg(grid, self.palette, self.scale)
         self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))

@@ -7,7 +7,7 @@ from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
 from common import header, header2, get_text_color, menu_item, enable, UiMetatile, subscribe_to_resize_event, add_handlers
-from v9918 import TileNxN, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
+from v9918 import Tile, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 
 # constants
@@ -183,7 +183,7 @@ class ColorButton(ui.button):
 
 class TileEditor(ui.element):
     title: str
-    grid: TileNxN
+    grid: Tile
     current_fg_color: int = DEFAULT_FG_COLOR
     current_bg_color: int = DEFAULT_BG_COLOR
     last_fg_button: ColorButton
@@ -224,7 +224,7 @@ class TileEditor(ui.element):
     textarea: ui.textarea
 
 
-    def __init__(self, parent: ui.element, grid: TileNxN | IO[str] | IO[bytes] | None = None, fg: int | None = None, bg: int | None = None):
+    def __init__(self, parent: ui.element, grid: Tile | IO[str] | IO[bytes] | None = None, fg: int | None = None, bg: int | None = None):
         super().__init__('div')
         self.parent = parent
 
@@ -236,8 +236,8 @@ class TileEditor(ui.element):
 
         # UI elements to remember
         if not grid:
-            self.grid = TileNxN(self.current_fg_color, self.current_bg_color)
-        elif isinstance(grid, TileNxN):
+            self.grid = Tile(self.current_fg_color, self.current_bg_color)
+        elif isinstance(grid, Tile):
             self.grid = grid
         else:
             self.grid = json.load(grid)
@@ -382,7 +382,7 @@ class TileEditor(ui.element):
                 ui.button(icon='fa-solid fa-trash fa-lg', on_click=self.on_clear_tile).props('color=red').tooltip(text)
 
 
-    def build_grid(self, grid: TileNxN) -> ui.scroll_area:
+    def build_grid(self, grid: Tile) -> ui.scroll_area:
         with ui.scroll_area().classes('gap-0 w-full p-0 m-0').style(f'height: 500px; background-color: #ccc;') as container:
             with ui.column().classes('w-full gap-0 p-0 m-0 flex-nowrap'):
                 for y in range(len(grid)):
@@ -691,7 +691,7 @@ class TileEditor(ui.element):
 @ui.page('/')
 def main() -> None:
     add_handlers()
-    grid = TileNxN(15, 1, 32, 32)
+    grid = Tile(15, 1, 32, 32)
     TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
 
 

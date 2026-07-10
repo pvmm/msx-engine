@@ -30,7 +30,7 @@ def combine_colors(fg_color: int, bg_color: int) -> int:
 
 
 # classes
-class RowN:
+class TileRow:
     pattern: list[bool]
     fg: list[int]
     bg: list[int]
@@ -62,7 +62,7 @@ class RowN:
         return self.fg[x // TILE_SIZE] if self.pattern[x] else self.bg[x // TILE_SIZE]
 
 
-    def copy(self, row: RowN) -> None:
+    def copy(self, row: TileRow) -> None:
         self.pattern = list(row.pattern)
         self.fg, self.bg = list(row.fg), list(row.bg)
 
@@ -163,12 +163,12 @@ class RowN:
         self.bg.insert(0, self.bg.pop())
 
 
-class TileNxN:
-    rows: list[RowN]
+class Tile:
+    rows: list[TileRow]
 
     @staticmethod
-    def copy(tile: TileNxN) -> TileNxN:
-        self = TileNxN()
+    def copy(tile: Tile) -> Tile:
+        self = Tile()
         for i, row in enumerate(tile.rows):
             self.rows[i].copy(row)
         return self
@@ -179,7 +179,7 @@ class TileNxN:
             raise ValueError("width must be a multiple of 8")
         if not height or height % 8 != 0:
             raise ValueError("width must be a multiple of 8")
-        self.rows: list[RowN] = [RowN(fg, bg, width) for _ in range(height)]
+        self.rows: list[TileRow] = [TileRow(fg, bg, width) for _ in range(height)]
 
 
     def __str__(self) -> str:
@@ -191,13 +191,13 @@ class TileNxN:
         return len(self.rows)
 
 
-    def __getitem__(self, y: int) -> RowN:
+    def __getitem__(self, y: int) -> TileRow:
         if y < 0 or y > len(self):
             raise IndexError('outside bounds')
         return self.rows[y]
 
 
-    def __setitem__(self, y: int, row: RowN) -> None:
+    def __setitem__(self, y: int, row: TileRow) -> None:
         self.rows[y] = row
 
 
@@ -262,7 +262,7 @@ class TileNxN:
 
 
     def mirror_vertically(self) -> None:
-        tmp: list[RowN] = [RowN() for _ in range(len(self))]
+        tmp: list[TileRow] = [TileRow() for _ in range(len(self))]
         for y in range(len(self)):
             tmp[len(self) - y - 1] = self.rows[y]
         self.rows = tmp
@@ -293,14 +293,14 @@ class TileNxN:
 
 
     def shift_up(self) -> None:
-        tmp: list[RowN] = [RowN() for _ in range(len(self))]
+        tmp: list[TileRow] = [TileRow() for _ in range(len(self))]
         for y in range(len(self)):
             tmp[(y - 1) % len(self)].copy(self.rows[y])
         self.rows = tmp
 
 
     def shift_down(self) -> None:
-        tmp: list[RowN] = [RowN() for _ in range(len(self))]
+        tmp: list[TileRow] = [TileRow() for _ in range(len(self))]
         for y in range(len(self)):
             tmp[(y + 1) % len(self)].copy(self.rows[y])
         self.rows = tmp

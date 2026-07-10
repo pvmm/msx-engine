@@ -2,7 +2,7 @@ import json
 import urllib.parse
 
 from nicegui import ui, events
-from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, TileNxN
+from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
@@ -80,7 +80,7 @@ class StageEditor(ui.row):
 
     def add_metatile(self, bgcolor_index: int) -> UiMetatile:
         with self.metatiles_row:
-            metatile = UiMetatile(TileNxN(15, bgcolor_index), PALETTE) \
+            metatile = UiMetatile(Tile(15, bgcolor_index), PALETTE) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
             return metatile
 
