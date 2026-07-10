@@ -1,15 +1,11 @@
-# functions
 import os
 import json
-import urllib
 import base64
 
 from io import BytesIO
 from collections.abc import Callable
-from typing import Any
 from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
-from nicegui.elements.interactive_image import InteractiveImage
 
 from v9918 import Tile
 
@@ -166,30 +162,3 @@ def grid_to_svg(grid: Tile | list[list[int]], palette: list[str], scale: int = 2
             )
     svg.append('</svg>')
     return ''.join(svg)
-
-
-class UiMetatile(InteractiveImage):
-    """Represents a metatile in the UI, allowing to display and select/unselect it."""
-    grid: Any
-    scale: int
-    palette: list[str]
-
-    def __init__(self, data: Tile | str | bytes | list[list[int]], palette: list[str], scale: int = 5):
-        grid: Any
-        super().__init__()
-        self.palette = palette
-        self.scale = scale
-        if isinstance(data, list):
-            grid = data
-        elif isinstance(data, str) or isinstance(data, bytes):
-            # Convert from json string
-            grid = json.loads(data)
-        else:
-            grid = data
-        self.reload(grid)
-
-
-    def reload(self, grid: Tile | list[list[int]]) -> None:
-        self.grid = grid
-        data = grid_to_svg(grid, self.palette, self.scale)
-        self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))

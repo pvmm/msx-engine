@@ -6,7 +6,8 @@ from v9918 import PALETTE, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, Tile
 from tileeditor import TileEditor
 
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR
-from common import header, get_text_color, enable, UiMetatile, add_handlers
+from common import header, get_text_color, enable, add_handlers
+from ui import UiMetatile
 
 
 TILE_PIXEL_SIZE = 12

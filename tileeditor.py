@@ -6,7 +6,8 @@ from typing import Callable, IO
 from functools import partial
 from nicegui import ui, events
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
-from common import header, header2, get_text_color, menu_item, enable, UiMetatile, subscribe_to_resize_event, add_handlers
+from common import header, header2, get_text_color, menu_item, enable, subscribe_to_resize_event, add_handlers
+from ui import UiPixel, UiMetatile
 from v9918 import Tile, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
 

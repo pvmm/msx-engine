@@ -2,7 +2,8 @@ import common
 
 from nicegui import ui, events
 from tileeditor import TileEditor
-from common import header, get_text_color, enable, UiMetatile
+from common import header, get_text_color, enable
+from ui import UiMetatile
 from v9918 import PALETTE, DEFAULT_FG_COLOR, Tile
 from constants import TILE_STORAGE_HEIGHT, CONTAINER_COLOR, TILE_PIXEL_SIZE, GRID_PIXEL_MAX
 
