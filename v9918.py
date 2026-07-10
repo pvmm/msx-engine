@@ -35,10 +35,13 @@ class TileRow:
     fg: list[int]
     bg: list[int]
 
-    def __init__(self, fg: int = 0, bg: int = 0, width: int = 8):
+    def __init__(self, pattern: list[bool] | None = None, fg: int = 0, bg: int = 0, width: int = 8):
         if width % 8 != 0:
             raise ValueError("width must be a multiple of 8")
-        self.pattern = [False] * width
+        if pattern is None:
+            self.pattern = [False] * width
+        else:
+            self.pattern = pattern
         self.fg = [fg] * (width // TILE_SIZE)
         self.bg = [bg] * (width // TILE_SIZE)
 
@@ -174,12 +177,12 @@ class Tile:
         return self
 
 
-    def __init__(self, fg: int = 0, bg: int = 0, width: int = 8, height: int = 8):
+    def __init__(self, pattern: list[int] | None = None, fg: int = 0, bg: int = 0, width: int = 8, height: int = 8):
         if not width or width % 8 != 0:
             raise ValueError("width must be a multiple of 8")
         if not height or height % 8 != 0:
             raise ValueError("width must be a multiple of 8")
-        self.rows: list[TileRow] = [TileRow(fg, bg, width) for _ in range(height)]
+        self.rows: list[TileRow] = [TileRow(pattern, fg, bg, width) for _ in range(height)]
 
 
     def __str__(self) -> str:
