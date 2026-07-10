@@ -68,10 +68,9 @@ class TileViewer:
                 on_change=lambda e: self.set_zoom(int(e.value)),
             )
 
-            with ui.scroll_area().classes('w-full flex-1 border'):
-                ui.html(
-                    '<canvas id="tile_canvas" class="pixelated"></canvas>'
-                )
+            with ui.scroll_area().classes('w-full flex-1 border bg-gray-200'):
+                with ui.element('canvas').props('id=tile_canvas') as canvas:
+                    canvas.on('contextmenu.prevent', lambda: None)
 
         ui.on("tile_clicked", self.on_tile_clicked)
 
