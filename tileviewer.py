@@ -142,7 +142,8 @@ class TileViewer:
 
         width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image.size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
-            editor = TileEditor(parent, Tile())
+            metatiles = self.msx.to_metatiles()
+            editor = TileEditor(parent, metatiles)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
                 ui.button('Cancel', on_click=lambda: dialog.submit(False))
