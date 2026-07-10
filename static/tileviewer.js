@@ -1,4 +1,8 @@
 TileViewer = class {
+    constructor() {
+        this.controller = null;
+    }
+
     initialize(options) {
         this.canvas = document.getElementById(options.canvasId);
         this.ctx = this.canvas.getContext("2d");
@@ -14,6 +18,11 @@ TileViewer = class {
         };
         this.image.src = options.image;
         this.installEvents();
+    }
+
+    reset() {
+        this.ctx.reset();
+        this.removeEvents();
     }
 
     setState(state) {
@@ -84,6 +93,9 @@ TileViewer = class {
     }
 
     installEvents() {
+        this.controller = new AbortController();
+        const { signal } = this.controller;
+
         this.canvas.addEventListener("click", e => {
             const rect = this.canvas.getBoundingClientRect();
             const tile = this.canvasToTile(
@@ -91,7 +103,14 @@ TileViewer = class {
                 e.clientY - rect.top
             );
             emitEvent("tile_clicked", tile);
-        });
+        }, { signal });
+    }
+
+    removeEvents() {
+        if (this.controller) {
+            this.controller.abort();
+            this.controller = null;
+        }
     }
 }
 

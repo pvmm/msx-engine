@@ -52,7 +52,7 @@ class TileViewer:
         with ui.column().classes('w-full h-screen'):
 
             with ui.row().classes('items-end flex-nowrap') as parent:
-                FileLoader(parent, on_load=self.load_image)
+                FileLoader(parent, on_loaded=self.load_image, on_removed=self.remove_image)
                 self.grid_width_number = disable(ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
                           on_change=lambda e: self.on_change_grid_size('w', e),
                           validation={'metatile size mismatch': lambda value: self.image.size[0] % value == 0}))
@@ -76,7 +76,7 @@ class TileViewer:
         ui.on("tile_clicked", self.on_tile_clicked)
 
 
-    def load_image(self, data: bytes):
+    def load_image(self, data: bytes) -> None:
         image = Image.open(BytesIO(data))
         self.msx_image = self.engine.convert(image)
         self.image = self.msx_image.to_image()
@@ -84,7 +84,9 @@ class TileViewer:
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
         self.image64 = file_to_base64(buffer)
+        self.grid_width_number.set_value(8);
         enable(self.grid_width_number)
+        self.grid_height_number.set_value(8);
         enable(self.grid_height_number)
 
         ui.run_javascript(f"""
@@ -94,6 +96,12 @@ class TileViewer:
                 zoom: {self.zoom}
             }});
         """)
+
+
+    def remove_image(self, event: events.GenericEventArguments) -> None:
+        disable(self.grid_width_number)
+        disable(self.grid_height_number)
+        ui.run_javascript('window.tileViewer.reset();');
 
 
     def on_change_grid_size(self, type: str, event: events.ValueChangeEventArguments[int | None]) -> None:
