@@ -6,8 +6,13 @@ from io import BytesIO
 import bmpto105
 from bmpto105 import BmpTo105
 
+import common
 from common import run, add_handlers, file_to_base64, disable, enable
+
+from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
+from tileeditor import TileEditor
+from v9918 import Tile
 
 
 PALETTE = [
@@ -23,6 +28,7 @@ class TileViewer:
     grid_height: int
     selected_x: int
     selected_y: int
+    msx: MSXBitmap_105 | None
     image: Image;
     image64: str;
 
@@ -77,8 +83,8 @@ class TileViewer:
 
     def load_image(self, data: bytes) -> None:
         image = Image.open(BytesIO(data))
-        self.msx_image = self.engine.convert(image)
-        self.image = self.msx_image.to_image()
+        self.msx= self.engine.convert(image)
+        self.image = self.msx.to_image()
 
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
@@ -107,7 +113,6 @@ class TileViewer:
         if self.image:
             if type == 'w': self.grid_width = event.value
             if type == 'h': self.grid_height = event.value
-            print('redraw!')
             self.redraw()
 
 
@@ -129,12 +134,23 @@ class TileViewer:
         self.redraw()
 
 
-    def on_tile_clicked(self, e):
+    async def on_tile_clicked(self, e):
         self.selected_x = e.args['col'] * self.grid_width
         self.selected_y = e.args['row'] * self.grid_height
         self.redraw()
-        tile = self.msx_image.tile(e.args['col'], e.args['row'], self.grid_width, self.grid_height)
-        TileEditor(tile)
+        tile = self.msx.tile(e.args['col'], e.args['row'] * self.grid_height, self.grid_width // 8, self.grid_height)
+
+        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image.size[0] * GRID_PIXEL_MAX)
+        with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
+            editor = TileEditor(parent, Tile())
+            with ui.row().classes('w-full justify-end'):
+                ui.button('OK', on_click=lambda: dialog.submit(True))
+                ui.button('Cancel', on_click=lambda: dialog.submit(False))
+        result = await dialog
+        if result and editor and self.selected_tile:
+            # return tile changes
+            #self.selected_tile.reload(editor.grid)
+            pass
 
 
 @ui.page('/')
