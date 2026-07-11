@@ -86,6 +86,7 @@ class TileViewer:
         image = Image.open(BytesIO(data))
         self.msx= self.engine.convert(image)
         self.image = self.msx.to_image()
+        self.msx.save_bitmap('image.105.png')
 
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
