@@ -75,8 +75,9 @@ class TileViewer:
             )
 
             with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
-                canvas = (ui.element('canvas').props('id=tile_canvas')
-                    .on('contextmenu.prevent', lambda: None))
+                canvas = (
+                    ui.element('canvas').props('id=tile_canvas').on('contextmenu.prevent', lambda: None)
+                )
 
         ui.on("tile_clicked", self.on_tile_clicked)
 
