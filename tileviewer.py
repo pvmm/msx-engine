@@ -11,7 +11,7 @@ from common import run, add_handlers, file_to_base64, disable, enable
 
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
-from datatypes import Tile, from_105_to_metatiles
+from datatypes import Tile, from_105_to_metatile
 from tileeditor import TileEditor
 
 
@@ -112,8 +112,8 @@ class TileViewer:
 
     def on_change_grid_size(self, type: str, event: events.ValueChangeEventArguments[int | None]) -> None:
         if self.image:
-            if type == 'w': self.grid_width = event.value
-            if type == 'h': self.grid_height = event.value
+            if type == 'w': self.grid_width = int(event.value)
+            if type == 'h': self.grid_height = int(event.value)
             self.redraw()
 
 
@@ -136,11 +136,15 @@ class TileViewer:
 
 
     async def on_tile_clicked(self, e):
+        print(e.args)
         self.selected_x = e.args['col'] * self.grid_width
         self.selected_y = e.args['row'] * self.grid_height
         self.redraw()
-        #tile = self.msx.tile(e.args['col'], e.args['row'] * self.grid_height, self.grid_width // 8, self.grid_height)
-        metatiles = from_105_to_metatiles(self.msx.to_metatiles())
+
+        frame = int(e.args['button'] // 2)
+        data = self.msx.to_metatile(e.args['col'], e.args['row'] * self.grid_height,
+                                    int(self.grid_width / 8), self.grid_height, frame)
+        metatiles = from_105_to_metatile(data, self.grid_width, self.grid_height)
 
         width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image.size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:

@@ -5,6 +5,7 @@ from nicegui.elements.interactive_image import InteractiveImage
 
 from datatypes import Tile
 from v9918 import DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
+from common import grid_to_svg
 
 
 class UiPixel(ui.card):
