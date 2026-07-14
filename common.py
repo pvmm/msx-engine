@@ -42,7 +42,7 @@ def add_handlers() -> None:
     ui.on('resize', lambda e: screen_resize(e))
 
 
-def run() -> None:
+def run(title: str, *, host: str = '0.0.0.0', port: int = 8080, reload: bool = True) -> None:
     # Add static directory
     app.add_static_files('/static', os.path.join(os.path.dirname(__file__), 'static'))
 
@@ -81,7 +81,7 @@ def run() -> None:
         }
     ''', shared=True)
 
-    ui.run(title='NiceGUI Tile Editor') 
+    ui.run(title=title, host=host, port=port, reload=reload)
     
 
 def header(text: str) -> ui.element:

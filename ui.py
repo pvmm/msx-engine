@@ -1,5 +1,7 @@
 import json
 import urllib
+
+from typing import Any
 from nicegui import ui
 from nicegui.elements.interactive_image import InteractiveImage
 

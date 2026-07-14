@@ -4,7 +4,7 @@ import base64
 from io import BytesIO
 
 import bmpto105
-from bmpto105 import BmpTo105
+from bmpto105 import BmpTo105, MSXBitmap_105
 
 import common
 from common import run, add_handlers, file_to_base64, disable, enable
@@ -43,7 +43,7 @@ class TileViewer:
     grid_width_number: ui.element
     grid_height_number: ui.element
 
-    def __init__(self, image: Image | None = None):
+    def __init__(self, image: Image.Image | None = None):
         self.engine = BmpTo105(PALETTE)
         self.zoom = 4
         self.grid_width = 8
@@ -159,15 +159,3 @@ class TileViewer:
             #self.selected_tile.reload(editor.grid)
             pass
 
-
-@ui.page('/')
-def main() -> None:
-    add_handlers()
-    # load local file
-    #TileViewer(Image.open(IMAGE_FILE).convert('RGBA'))
-    TileViewer()
-
-
-if __name__ in {"__main__", "__mp_main__"}:
-    from common import run
-    run()
