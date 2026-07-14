@@ -140,25 +140,3 @@ def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.
         else:
             element.props('disabled')
     return element
-
-
-def grid_to_svg(grid: Tile | list[list[int]], palette: list[str], scale: int = 20) -> str:
-    width = len(grid[0])
-    height = len(grid)
-
-    svg = [ f'''<svg xmlns="http://www.w3.org/2000/svg"
-            width="{width * scale}"
-            height="{height * scale}">''' ]
-    for y in range(height):
-        for x in range(width):
-            svg.append(
-                f'<rect '
-                f'x="{x * scale}" '
-                f'y="{y * scale}" '
-                f'width="{scale}" '
-                f'height="{scale}" '
-                f'fill="{palette[grid[y][x]]}" '
-                f'stroke="#444"/>'
-            )
-    svg.append('</svg>')
-    return ''.join(svg)

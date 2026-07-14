@@ -7,7 +7,6 @@ from nicegui.elements.interactive_image import InteractiveImage
 
 from datatypes import Tile
 from v9918 import DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
-from common import grid_to_svg
 
 
 class UiPixel(ui.card):
@@ -136,4 +135,27 @@ class UiMetatile(InteractiveImage):
         self.grid = grid
         data = grid_to_svg(grid, self.palette, self.scale)
         self.ui = self.set_source('data:image/svg+xml;utf8,' + urllib.parse.quote(data))
+
+
+def grid_to_svg(grid: Tile | list[list[int]], palette: list[str], scale: int = 20) -> str:
+    """Create SVG image to be used by canvas."""
+    width = len(grid[0])
+    height = len(grid)
+
+    svg = [ f'''<svg xmlns="http://www.w3.org/2000/svg"
+            width="{width * scale}"
+            height="{height * scale}">''' ]
+    for y in range(height):
+        for x in range(width):
+            svg.append(
+                f'<rect '
+                f'x="{x * scale}" '
+                f'y="{y * scale}" '
+                f'width="{scale}" '
+                f'height="{scale}" '
+                f'fill="{palette[grid[y][x]]}" '
+                f'stroke="#444"/>'
+            )
+    svg.append('</svg>')
+    return ''.join(svg)
 
