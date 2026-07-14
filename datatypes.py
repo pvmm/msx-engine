@@ -1,14 +1,14 @@
 from __future__ import annotations  # 1. Add this at the top
 from typing import Self
 
-from v9918 import divide_colors
+from v9918 import divide_colors, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
 
 
 TILE_SIZE = 8
 
 
 # Disable debug
-debug = lambda *args : None
+debug = lambda *args : None # print(*args)
 
 
 #
@@ -20,21 +20,20 @@ class TileRow:
     fg: list[int]
     bg: list[int]
 
-    def __init__(self, pattern: list[bool] | None = None, fg: list[int] | None = None, bg: list[int] | None = None, width: int = 8):
-        if width % 8 != 0:
-            raise ValueError("width must be a multiple of 8")
-        n = width // TILE_SIZE
+    def __init__(self, pattern: list[bool] | None = None, fg: list[int] | None = None, bg: list[int] | None = None, width: int = TILE_SIZE):
+        if width % TILE_SIZE != 0:
+            raise ValueError(f'width must be a multiple of {TILE_SIZE}')
+        n = int(width // TILE_SIZE)
         self.pattern = [False] * width if pattern is None else pattern
-        debug(f'{self.pattern=}')
-        self.fg = [0] * n if fg is None else fg[0:n]
-        self.bg = [0] * n if bg is None else bg[0:n]
+        self.fg = [DEFAULT_FG_COLOR] * n if fg is None else fg[0:n]
+        self.bg = [DEFAULT_BG_COLOR] * n if bg is None else bg[0:n]
 
 
     def __str__(self) -> str:
         s = ''
-        for x in range(0, len(self) // 8):
+        for x in range(0, len(self) // TILE_SIZE):
             bin = ''
-            for value in self.pattern[x * 8: (x + 1) * 8]:
+            for value in self.pattern[x * TILE_SIZE: (x + 1) * TILE_SIZE]:
                 bin += '1' if value else '0'
             s += f'(p:{bin},c:{hex(self.fg[x])}:{hex(self.bg[x])})\n'
         return s
@@ -46,7 +45,8 @@ class TileRow:
 
     def __getitem__(self, x: int) -> int:
         """Return the foreground color index if the pixel is active, otherwise return the background color index."""
-        return self.fg[x // TILE_SIZE] if self.pattern[x] else self.bg[x // TILE_SIZE]
+        debug(f'{x=}, {self.bg=}, {self.fg=}')
+        return self.fg[int(x // TILE_SIZE)] if self.pattern[x] else self.bg[int(x // TILE_SIZE)]
 
 
     def copy(self, row: Self) -> None:
@@ -131,7 +131,7 @@ class TileRow:
 
 
     def shift_tile_left(self) -> None:
-        '''shift left 8 times inplace'''
+        '''shift left TILE_SIZE times inplace'''
         self.shift_left(TILE_SIZE)
         self.fg.append(self.fg.pop(0))
         self.bg.append(self.bg.pop(0))
@@ -144,7 +144,7 @@ class TileRow:
 
 
     def shift_tile_right(self) -> None:
-        '''shift right 8 times inplace'''
+        '''shift right TILE_SIZE times inplace'''
         self.shift_right(TILE_SIZE)
         self.fg.insert(0, self.fg.pop())
         self.bg.insert(0, self.bg.pop())
@@ -161,15 +161,25 @@ class Tile:
         return self
 
 
-    def __init__(self, pattern: list[bool] | None = None, fg: list[int] | None = None, bg: list[int] | None = None, width: int = 8, height: int = 8):
-        if not width or width % 8 != 0:
-            raise ValueError("width must be a multiple of 8")
-        if not height or height % 8 != 0:
-            raise ValueError("height must be a multiple of 8")
+    def __init__(self, pattern: list[bool] | None = None, fg: list[int] | None = None, bg: list[int] | None = None, width: int = TILE_SIZE, height: int = TILE_SIZE):
+        if not width or width % TILE_SIZE != 0:
+            raise ValueError(f'width must be a multiple of {TILE_SIZE}')
+        if not height or height % TILE_SIZE != 0:
+            raise ValueError(f'height must be a multiple of {TILE_SIZE}')
 
-        print(f'{width=}, {height=}')
-        self.rows = [TileRow(pattern[n * width : n * width + 8],
-                     fg[n : n + 1], bg[n : n + 1], width) for n in range(height)]
+        stride = int(width // TILE_SIZE)
+        if pattern is None:
+            pattern = [False] * width * height
+        if fg is None:
+            fg = [DEFAULT_FG_COLOR] * stride * height
+        if bg is None:
+            bg = [DEFAULT_BG_COLOR] * stride * height
+        self.rows = [TileRow(
+                            pattern[n * width : n * width + width],
+                            fg[n * stride : n * stride + stride],
+                            bg[n * stride : n * stride + stride],
+                            width)
+                     for n in range(height)]
 
 
     def __str__(self) -> str:
@@ -315,7 +325,7 @@ def from_105_to_metatile(data: list[int], width: int, height: int) -> Tile:
     while True:
         b = next(i, None)
         if b is None: break
-        p0.extend([get_pattern(b, bit) for bit in range(8)])
+        p0.extend([get_pattern(b, bit) for bit in range(TILE_SIZE)])
         b = next(i)
         c = divide_colors(b)
         fg.append(c[0])
