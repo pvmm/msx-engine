@@ -1,0 +1,4 @@
+[submodule "pybmpto105"]
+	path = pybmpto105
+	url = git@github.com:pvmm/BMPto105
+	branch = library

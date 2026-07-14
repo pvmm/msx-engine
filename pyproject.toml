@@ -1,0 +1,24 @@
+[tool.mypy]
+# Make mypy strict but practical
+python_version = "3.14"
+strict = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+
+# Optional: ignore missing stubs for external libraries
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = [
+    "missing-docstring",
+    "too-few-public-methods"
+]
