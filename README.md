@@ -14,4 +14,6 @@ short_description: convert bitmap into 105 colors images for the MSX
 TODO
 
 * [x] Extend tile editor to edit metatiles;
-* [ ] Open metatiles in tile editor;
+* [x] Open metatiles in tile editor;
+* [ ] display only odd/even frame in tile viewer;
+* [ ] use ~singular vector decomposition~ DCT to group similar tiles;
