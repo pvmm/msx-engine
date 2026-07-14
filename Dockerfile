@@ -5,17 +5,19 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN apt-get update && apt-get install -y build-essential g++ cmake
+RUN apt-get update && apt-get install -y git build-essential g++ cmake
 
 COPY . .
 
-#RUN update.sh
+RUN ln -sf pybmpto105/bmpto105 bmpto105
+
+RUN chmod 755 bmpto105/compile.sh
 
 # Compile library here
-#RUN gui/bmpto105/compile.sh --force
+RUN bmpto105/compile.sh --force
 
 EXPOSE 7860
 
-ENV LD_LIBRARY_PATH=./gui/bmpto105/
+ENV LD_LIBRARY_PATH=./bmpto105/
 
 CMD ["python", "app.py"]
