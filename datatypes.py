@@ -1,3 +1,6 @@
+from __future__ import annotations  # 1. Add this at the top
+from typing import Self
+
 from v9918 import divide_colors
 
 
@@ -8,26 +11,9 @@ TILE_SIZE = 8
 debug = lambda *args : None
 
 
-def get_pattern(pattern: int, bit: int) -> bool:
-    return True if pattern & (1 << (TILE_SIZE - 1 - bit)) else False
-
-
-def from_105_to_metatile(data: list[int], width: int, height: int) -> Tile:
-    p0, fg, bg = [], [], []
-    i = iter(data)
-    while True:
-        b = next(i, None)
-        if b is None: break
-        p0.extend([get_pattern(b, bit) for bit in range(8)])
-        b = next(i)
-        c = divide_colors(b)
-        fg.append(c[0])
-        bg.append(c[1])
-    debug('l: pg0, fg, bg', len(p0), len(fg), len(bg))
-    debug('v: pg0, fg, bg', p0, fg, bg)
-
-    return Tile(p0, fg, bg, width, height)
-
+#
+# Classes
+#
 
 class TileRow:
     pattern: list[bool]
@@ -63,7 +49,7 @@ class TileRow:
         return self.fg[x // TILE_SIZE] if self.pattern[x] else self.bg[x // TILE_SIZE]
 
 
-    def copy(self, row: TileRow) -> None:
+    def copy(self, row: Self) -> None:
         self.pattern = list(row.pattern)
         self.fg, self.bg = list(row.fg), list(row.bg)
 
@@ -168,7 +154,7 @@ class Tile:
     rows: list[TileRow]
 
     @staticmethod
-    def copy(tile: Tile) -> Tile:
+    def copy(tile: Self) -> Self:
         self = Tile()
         for i, row in enumerate(tile.rows):
             self.rows[i].copy(row)
@@ -314,3 +300,27 @@ class Tile:
         '''copy and paste data'''
         pass
 
+
+#
+# functions
+#
+
+def get_pattern(pattern: int, bit: int) -> bool:
+    return True if pattern & (1 << (TILE_SIZE - 1 - bit)) else False
+
+
+def from_105_to_metatile(data: list[int], width: int, height: int) -> Tile:
+    p0, fg, bg = [], [], []
+    i = iter(data)
+    while True:
+        b = next(i, None)
+        if b is None: break
+        p0.extend([get_pattern(b, bit) for bit in range(8)])
+        b = next(i)
+        c = divide_colors(b)
+        fg.append(c[0])
+        bg.append(c[1])
+    debug('l: pg0, fg, bg', len(p0), len(fg), len(bg))
+    debug('v: pg0, fg, bg', p0, fg, bg)
+
+    return Tile(p0, fg, bg, width, height)
