@@ -7,7 +7,8 @@ colorTo: pink
 sdk: docker
 pinned: false
 license: mit
-short_description: 105 colors images for the MSX
+app_port: 7860
+short_description: convert bitmap into 105 colors images for the MSX
 ---
 
 TODO
