@@ -239,7 +239,7 @@ class TileEditor(ui.element):
 
         # UI elements to remember
         if not grid:
-            self.grid = Tile(self.current_fg_color, self.current_bg_color)
+            self.grid = Tile(None, [self.current_fg_color] * 8, [self.current_bg_color] * 8, 8, 8)
         elif isinstance(grid, Tile):
             self.grid = grid
         else:
@@ -694,10 +694,10 @@ class TileEditor(ui.element):
 @ui.page('/')
 def main() -> None:
     add_handlers()
-    grid = Tile(15, 1, 32, 32)
+    grid = Tile(None, None, None, 32, 32)
     TileEditor(ui.column().classes('w-full min-h-screen p-0 m-0'), grid)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run
-    run()
+    run('TileEditor v0.5.0')
