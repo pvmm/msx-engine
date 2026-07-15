@@ -13,6 +13,7 @@ from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
 from datatypes import Tile, from_105_to_metatile
 from tileeditor import TileEditor
+from imageslider import ImageSliderWidget
 
 
 PALETTE = [
@@ -69,21 +70,33 @@ class TileViewer:
     def build_ui(self):
         ui.add_head_html('<script src="/static/tileviewer.js"></script>', shared=True)
         with ui.column().classes('w-full h-screen'):
+            ImageSliderWidget('./samples', 256, 192, on_loaded=self.load_image, on_removed=self.remove_image)
+
+            with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
+                canvas = (
+                    ui.element('canvas').props('id=tile_canvas').on('contextmenu.prevent', lambda: None)
+                )
 
             with ui.row().classes('items-end flex-nowrap w-full') as parent:
-                FileLoader(parent, on_loaded=self.load_image, on_removed=self.remove_image)
+                (
+                    ui.slider(min=1, max=16, value=self.zoom, step=1,
+                              on_change=lambda e: self.set_zoom(int(e.value)))
+                        .props('vertical reverse')
+                        .classes('h-[120px]')
+                )
+
                 with ui.column().classes('items-start flex-nowrap w-full'):
 
                     self.reuse_badges = []
                     self.total_badges = []
                     with ui.row().classes('flex-nowrap items-center'):
-                        ui.label('tiles reused:')
+                        ui.label('Tiles reused:')
                         self.reuse_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
                         ui.label('/')
                         self.reuse_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
                         ui.label('/')
                         self.reuse_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
-                        ui.label('tiles total:')
+                        ui.label('Tiles total:')
                         self.total_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
                         ui.label('/')
                         self.total_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
@@ -106,18 +119,6 @@ class TileViewer:
                                           on_change=self.on_change_threshold).classes('w-[170px]').props('debounce=500')
                         )
 
-            ui.slider(
-                min=1,
-                max=16,
-                value=self.zoom,
-                step=1,
-                on_change=lambda e: self.set_zoom(int(e.value)),
-            )
-
-            with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
-                canvas = (
-                    ui.element('canvas').props('id=tile_canvas').on('contextmenu.prevent', lambda: None)
-                )
 
         ui.on("tile_clicked", self.on_tile_clicked)
 
@@ -161,15 +162,20 @@ class TileViewer:
         """)
 
 
-    def remove_image(self, event: events.GenericEventArguments) -> None:
-        disable(self.grid_width_number)
-        disable(self.grid_height_number)
-        disable(self.threshold_number)
-        ui.run_javascript('window.tileViewer.reset();');
+    def remove_image(self) -> None:
+        if self.image:
+            disable(self.grid_width_number)
+            disable(self.grid_height_number)
+            disable(self.threshold_number)
+            ui.run_javascript('window.tileViewer.reset();');
+
+
+    def on_remove_image(self, event: events.GenericEventArguments) -> None:
+        self.remove_image()
 
 
     def on_change_grid_size(self, type: str, event: events.ValueChangeEventArguments[int | None]) -> None:
-        if self.image:
+        if self.msx:
             if type == 'w': self.grid_width = int(event.value)
             if type == 'h': self.grid_height = int(event.value)
             self.redraw()
