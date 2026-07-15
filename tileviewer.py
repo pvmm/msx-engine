@@ -23,7 +23,7 @@ PALETTE = [
 
 
 class TileViewer:
-    reused_tiles: list[int, int, int]
+    reuse_tiles: list[int, int, int]
     total_tiles: list[int, int, int]
     threshold: float
     zoom: int
@@ -45,13 +45,15 @@ class TileViewer:
     # widgets
     grid_width_number: ui.element
     grid_height_number: ui.element
-    tile_info_label: ui.label
+    threshold_number: ui.element
+    reuse_badges: list[ui.badge]
+    total_badges: list[ui.badge]
 
     def __init__(self, image: Image.Image | None = None):
         self.msx = None
         if image: self.load_image(image)
         self.engine = BmpTo105(PALETTE)
-        self.reused_tiles = [0, 0, 0]
+        self.reuse_tiles = [0, 0, 0]
         self.total_tiles = [0, 0, 0]
         self.threshold = 0.0
         self.zoom = 4
@@ -66,21 +68,40 @@ class TileViewer:
         ui.add_head_html('<script src="/static/tileviewer.js"></script>', shared=True)
         with ui.column().classes('w-full h-screen'):
 
-            with ui.row().classes('items-end flex-nowrap') as parent:
+            with ui.row().classes('items-end flex-nowrap w-full') as parent:
                 FileLoader(parent, on_loaded=self.load_image, on_removed=self.remove_image)
-                with ui.column().classes('items-end flex-nowrap w-full'):
-                    self.tile_info_label = ui.label('').classes('text-nowrap')
-                    self.update_tile_info()
-                    with ui.row().classes('items-end flex-nowrap'):
-                        self.grid_width_number = disable(ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
-                              on_change=lambda e: self.on_change_grid_size('w', e),
-                              validation={'metatile size mismatch': lambda value: self.image.size[0] % value == 0})
-                                  .props('hide-bottom-space')
+                with ui.column().classes('items-start flex-nowrap w-full'):
+
+                    self.reuse_badges = []
+                    self.total_badges = []
+                    with ui.row().classes('flex-nowrap items-center'):
+                        ui.label('tiles reused:')
+                        self.reuse_badges.append(ui.badge('0', color='purple'))
+                        ui.label('/')
+                        self.reuse_badges.append(ui.badge('0', color='purple'))
+                        ui.label('/')
+                        self.reuse_badges.append(ui.badge('0', color='purple'))
+                        ui.label('tiles total:')
+                        self.total_badges.append(ui.badge('0', color='purple'))
+                        ui.label('/')
+                        self.total_badges.append(ui.badge('0', color='purple'))
+                        ui.label('/')
+                        self.total_badges.append(ui.badge('0', color='purple'))
+
+                    with ui.row().classes('items-start flex-nowrap w-full'):
+                        self.grid_width_number = disable(
+                                ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
+                                          on_change=lambda e: self.on_change_grid_size('w', e),
+                                          validation={'metatile size mismatch': lambda value: self.image.size[0] % value == 0})
                         )
-                        self.grid_height_number = disable(ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
-                              on_change=lambda e: self.on_change_grid_size('h', e),
-                              validation={'metatile size mismatch': lambda value: self.image.size[1] % value == 0})
-                                  .props('hide-bottom-space')
+                        self.grid_height_number = disable(
+                                ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
+                                          on_change=lambda e: self.on_change_grid_size('h', e),
+                                          validation={'metatile size mismatch': lambda value: self.image.size[1] % value == 0})
+                        )
+                        self.threshold_number = disable(
+                                ui.number(label='DCT Threshold', min=0.0, value=0.0, step=0.1, max=1.0, format='%0.1f',
+                                          on_change=self.on_change_threshold).classes('w-[170px]')
                         )
 
             ui.slider(
@@ -100,9 +121,13 @@ class TileViewer:
 
 
     def update_tile_info(self) -> None:
-        reused_tiles = '???/???/???' if not self.msx else '/'.join([str(n) for n in self.reused_tiles])
-        total_tiles = '???/???/???' if not self.msx else '/'.join([str(n) for n in self.total_tiles])
-        self.tile_info_label.set_text(f"tile info: {reused_tiles} reused tiles, {total_tiles} total tiles.")
+        for n in range(3):
+            self.reuse_badges[n].set_text(self.reuse_tiles[n])
+            bg = 'red' if self.total_tiles[n] > 255 else ('yellow' if self.total_tiles[n] > 200 else 'green')
+            fg = 'black' if bg == 'yellow' else 'white'
+            self.total_badges[n].set_text_color(fg)
+            self.total_badges[n].set_background_color(bg)
+            self.total_badges[n].set_text(self.total_tiles[n])
 
 
     def load_image(self, data: bytes) -> None:
@@ -110,14 +135,12 @@ class TileViewer:
         self.msx = self.engine.convert(image)
 
         # update tile info
-        self.reused_tiles[0], self.total_tiles[0] = self.msx.stats2(0, 64, self.threshold)
-        self.reused_tiles[1], self.total_tiles[1] = self.msx.stats2(64, 128, self.threshold)
-        self.reused_tiles[2], self.total_tiles[2] = self.msx.stats2(128, 196, self.threshold)
+        self.reuse_tiles[0], self.total_tiles[0] = self.msx.stats2(0, 64, self.threshold)
+        self.reuse_tiles[1], self.total_tiles[1] = self.msx.stats2(64, 128, self.threshold)
+        self.reuse_tiles[2], self.total_tiles[2] = self.msx.stats2(128, 196, self.threshold)
         self.update_tile_info()
 
         self.image = self.msx.to_image()
-        self.msx.save_bitmap('image.105.png')
-
         buffer = BytesIO()
         self.image.save(buffer, format='PNG')
         self.image64 = file_to_base64(buffer)
@@ -125,6 +148,8 @@ class TileViewer:
         enable(self.grid_width_number)
         self.grid_height_number.set_value(8);
         enable(self.grid_height_number)
+        self.threshold_number.set_value(0.0);
+        enable(self.threshold_number)
 
         ui.run_javascript(f"""
             window.tileViewer.initialize({{
@@ -146,6 +171,14 @@ class TileViewer:
             if type == 'w': self.grid_width = int(event.value)
             if type == 'h': self.grid_height = int(event.value)
             self.redraw()
+
+
+    def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
+        self.threshold = event.value
+        self.reuse_tiles[0], self.total_tiles[0] = self.msx.stats2(0, 64, self.threshold)
+        self.reuse_tiles[1], self.total_tiles[1] = self.msx.stats2(64, 128, self.threshold)
+        self.reuse_tiles[2], self.total_tiles[2] = self.msx.stats2(128, 196, self.threshold)
+        self.update_tile_info()
 
 
     def redraw(self):

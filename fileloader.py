@@ -18,7 +18,7 @@ class FileLoader(ui.column):
 
 
     def build_ui(self) -> None:
-        with self.classes('gap-1 w-full'):
+        with self:
             with (
                 ui.upload(
                     on_upload=self.handle_upload,
