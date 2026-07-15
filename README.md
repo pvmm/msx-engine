@@ -11,6 +11,8 @@ app_port: 7860
 short_description: convert bitmap into 105 colors images for the MSX
 ---
 
+Using huggingface.py to upload project to huggingface.co
+
 TODO
 
 * [x] Extend tile editor to edit metatiles;
