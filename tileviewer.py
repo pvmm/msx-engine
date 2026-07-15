@@ -128,6 +128,7 @@ class TileViewer:
             self.total_badges[n].set_text_color(fg)
             self.total_badges[n].set_background_color(bg)
             self.total_badges[n].set_text(self.total_tiles[n])
+        enable(self.threshold_number)
 
 
     def load_image(self, data: bytes) -> None:
@@ -174,6 +175,7 @@ class TileViewer:
 
 
     def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
+        disable(self.threshold_number)
         self.threshold = event.value
         self.reuse_tiles[0], self.total_tiles[0] = self.msx.stats2(0, 64, self.threshold)
         self.reuse_tiles[1], self.total_tiles[1] = self.msx.stats2(64, 128, self.threshold)
