@@ -78,17 +78,17 @@ class TileViewer:
                     self.total_badges = []
                     with ui.row().classes('flex-nowrap items-center'):
                         ui.label('tiles reused:')
-                        self.reuse_badges.append(ui.badge('0', color='purple'))
+                        self.reuse_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
                         ui.label('/')
-                        self.reuse_badges.append(ui.badge('0', color='purple'))
+                        self.reuse_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
                         ui.label('/')
-                        self.reuse_badges.append(ui.badge('0', color='purple'))
+                        self.reuse_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
                         ui.label('tiles total:')
-                        self.total_badges.append(ui.badge('0', color='purple'))
+                        self.total_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
                         ui.label('/')
-                        self.total_badges.append(ui.badge('0', color='purple'))
+                        self.total_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
                         ui.label('/')
-                        self.total_badges.append(ui.badge('0', color='purple'))
+                        self.total_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
 
                     with ui.row().classes('items-start flex-nowrap w-full'):
                         self.grid_width_number = disable(
