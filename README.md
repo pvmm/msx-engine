@@ -1,14 +1,14 @@
 
 ---
 title: Msx 105 Colors
-emoji: 🌍
+emoji: 🎨
 colorFrom: purple
 colorTo: pink
 sdk: docker
 pinned: false
 license: mit
 app_port: 7860
-short_description: convert bitmap into 105 colors images for the MSX
+short_description: convert bitmaps into frame-interlacing images on the MSX.
 ---
 
 Using huggingface.py to upload project to huggingface.co
