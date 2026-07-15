@@ -2,7 +2,12 @@ from collections.abc import Callable
 from nicegui import ui, events
 
 
+# supported image types
+SUPPORTED_TYPES = '.png,.bmp,.gif'
+
+
 class FileLoader(ui.column):
+
     def __init__(self, parent: ui.element, on_loaded: Callable[[], None], on_removed: Callable[[events.GenericEventArguments], None] | None = None):
         with parent:
             super().__init__()
@@ -14,13 +19,17 @@ class FileLoader(ui.column):
 
     def build_ui(self) -> None:
         with self.classes('gap-1 w-full'):
-            (
+            with (
                 ui.upload(
                     on_upload=self.handle_upload,
                     on_rejected=lambda e: print('file was rejected'),
-                    max_files=1
-                ).props('auto-upload hide-upload-btn w-full accept=.png')
-            ).on('removed', self.on_removed)
+                    max_files=1)
+                .props(f'auto-upload hide-upload-btn w-full accept={SUPPORTED_TYPES}')
+                .on('removed', self.on_removed)
+            ).add_slot('list'):
+                with ui.row().classes('flex-nowrap items-center justify-center'):
+                    ui.icon('cloud_upload', size='lg')
+                    ui.label('256x192 image')
 
 
     async def handle_upload(self, e: events.UploadEventArguments) -> None:
