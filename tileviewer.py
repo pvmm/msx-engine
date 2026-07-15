@@ -1,13 +1,13 @@
-from nicegui import ui, app, events
+from nicegui import ui, app, events, run
 from PIL import Image
 import base64
 from io import BytesIO
 
-import bmpto105
+#import bmpto105
 from bmpto105 import BmpTo105, MSXBitmap_105
 
 import common
-from common import run, add_handlers, file_to_base64, disable, enable
+from common import add_handlers, file_to_base64, disable, enable
 
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
@@ -23,6 +23,7 @@ PALETTE = [
 
 
 class TileViewer:
+    processing_tiles: bool
     reuse_tiles: list[int, int, int]
     total_tiles: list[int, int, int]
     threshold: float
@@ -52,6 +53,7 @@ class TileViewer:
     def __init__(self, image: Image.Image | None = None):
         self.msx = None
         if image: self.load_image(image)
+        self.processing_tiles = False
         self.engine = BmpTo105(PALETTE)
         self.reuse_tiles = [0, 0, 0]
         self.total_tiles = [0, 0, 0]
@@ -101,7 +103,7 @@ class TileViewer:
                         )
                         self.threshold_number = disable(
                                 ui.number(label='DCT Threshold', min=0.0, value=0.0, step=0.1, max=1.0, format='%0.1f',
-                                          on_change=self.on_change_threshold).classes('w-[170px]')
+                                          on_change=self.on_change_threshold).classes('w-[170px]').props('debounce=500')
                         )
 
             ui.slider(
@@ -136,9 +138,7 @@ class TileViewer:
         self.msx = self.engine.convert(image)
 
         # update tile info
-        self.reuse_tiles[0], self.total_tiles[0] = self.msx.stats2(0, 64, self.threshold)
-        self.reuse_tiles[1], self.total_tiles[1] = self.msx.stats2(64, 128, self.threshold)
-        self.reuse_tiles[2], self.total_tiles[2] = self.msx.stats2(128, 196, self.threshold)
+        self.reuse_tiles, self.total_tiles = process_tiles(self.threshold, self.msx)
         self.update_tile_info()
 
         self.image = self.msx.to_image()
@@ -164,6 +164,7 @@ class TileViewer:
     def remove_image(self, event: events.GenericEventArguments) -> None:
         disable(self.grid_width_number)
         disable(self.grid_height_number)
+        disable(self.threshold_number)
         ui.run_javascript('window.tileViewer.reset();');
 
 
@@ -174,13 +175,18 @@ class TileViewer:
             self.redraw()
 
 
-    def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
+    async def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
         disable(self.threshold_number)
-        self.threshold = event.value
-        self.reuse_tiles[0], self.total_tiles[0] = self.msx.stats2(0, 64, self.threshold)
-        self.reuse_tiles[1], self.total_tiles[1] = self.msx.stats2(64, 128, self.threshold)
-        self.reuse_tiles[2], self.total_tiles[2] = self.msx.stats2(128, 196, self.threshold)
-        self.update_tile_info()
+        if self.processing_tiles:
+            return
+        self.processing_tiles = True
+        try:
+            self.threshold = event.value
+            self.reuse_tiles, self.total_tiles = await run.cpu_bound(process_tiles, event.value, self.msx)
+        finally:
+            self.processing_tiles = False
+            self.update_tile_info()
+            enable(self.threshold_number)
 
 
     def redraw(self):
@@ -224,3 +230,12 @@ class TileViewer:
             #self.selected_tile.reload(editor.grid)
             pass
 
+
+def process_tiles(threshold, msx: MSXBitmap_105):
+    """Run outside class so we don't have to pickle it."""
+    reuse_tiles, total_tiles = [0, 0, 0], [0, 0, 0]
+    reuse_tiles[0], total_tiles[0] = msx.stats(0, 64, threshold)
+    reuse_tiles[1], total_tiles[1] = msx.stats(64, 128, threshold)
+    reuse_tiles[2], total_tiles[2] = msx.stats(128, 196, threshold)
+
+    return reuse_tiles, total_tiles
