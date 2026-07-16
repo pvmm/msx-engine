@@ -134,7 +134,7 @@ class TileViewer:
 
 
     def load_image(self, data: bytes) -> None:
-        image = Image.open(BytesIO(data))
+        image = Image.open(BytesIO(data)).convert("RGB")
         try:
             self.msx = self.engine.convert(image)
         except Exception as e:
