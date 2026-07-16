@@ -11,6 +11,9 @@ from sessionbroker import display_task_dialog
 class ImageSliderWidget:
     on_loaded_callback: Callable
     on_removed_callback: Callable
+    current_index: int
+    width: int
+    height: int
     old_thumbnail: ui.card
 
     def __init__(self, image_paths, width: int, height: int, on_loaded: Callable[[bytes], None], on_removed: Callable[[], None]):
