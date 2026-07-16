@@ -1,6 +1,7 @@
 import json
 import urllib
 
+from collections.abc import Callable
 from typing import Any
 from nicegui import ui
 from nicegui.elements.interactive_image import InteractiveImage
@@ -159,3 +160,10 @@ def grid_to_svg(grid: Tile | list[list[int]], palette: list[str], scale: int = 2
     svg.append('</svg>')
     return ''.join(svg)
 
+
+async def show_message_dialog(message: str) -> str:
+    with ui.dialog() as dialog, ui.card():
+        ui.label(message)
+        with ui.row():
+            ui.button('OK', on_click=lambda: dialog.submit('OK'))
+    return str(await dialog)

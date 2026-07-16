@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from nicegui import ui, events
 
+from sessionbroker import display_task_dialog
+
 
 # supported image types
 SUPPORTED_TYPES = '.png,.bmp,.gif'
@@ -43,7 +45,7 @@ class FileLoader(ui.column):
                     ui.label(self.message)
 
 
+    @display_task_dialog('Loading local image...')
     async def handle_upload(self, e: events.UploadEventArguments) -> None:
         """Processes the dropped/uploaded image file."""
-        ui.notify(f'"{e.file.name}" uploaded')
         self.on_loaded(await e.file.read())

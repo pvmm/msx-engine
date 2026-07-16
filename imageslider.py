@@ -1,14 +1,16 @@
-from collections.abc import Callable
-from nicegui import ui
-from pathlib import Path
-
 import glob
 import os
 
+from collections.abc import Callable
+from nicegui import ui
+from pathlib import Path
 from fileloader import FileLoader
+from sessionbroker import display_task_dialog
 
 
 class ImageSliderWidget:
+    on_loaded_callback: Callable
+    on_removed_callback: Callable
     old_thumbnail: ui.card
 
     def __init__(self, image_paths, width: int, height: int, on_loaded: Callable[[bytes], None], on_removed: Callable[[], None]):
@@ -21,8 +23,8 @@ class ImageSliderWidget:
             height: Image height
         """
         self.image_paths = []
-        self.on_loaded = on_loaded
-        self.on_removed = on_removed
+        self.on_loaded_callback = on_loaded
+        self.on_removed_callback = on_removed
         self.current_index = None
         self.width = width
         self.height = height
@@ -57,15 +59,20 @@ class ImageSliderWidget:
 
             # Thumbnail slider
             with ui.row().classes('w-full overflow-x-auto items-end flex-nowrap') as parent:
-                FileLoader(parent, '256x192 image', 266, 240, self.on_loaded, self.on_removed)
+                FileLoader(parent, '256x192 image', 266, 240, self.on_loaded_callback, self.on_removed_callback)
                 for i, path in enumerate(self.image_paths):
                     with ui.card().classes(f'm-1 flex-shrink-0 cursor-pointer hover:shadow-md w-[{self.width + 12}px] h-[{self.height + 48}px] items-center overflow-hidden text-ellipsis') \
                             .on('click', lambda event, i=i: self.go_to_image(event, i)):
                         ui.image(path).props(f'width="{self.width}px" height="{self.height}px"')
                         ui.label(Path(path).name).classes('w-full truncate text-center text-xs whitespace-nowrap text-ellipsis nowrap')
-            
 
-    def go_to_image(self, event, index):
+
+    @display_task_dialog("Loading image...")
+    async def on_loaded(self):
+        self.on_loaded_callback(open(self.image_paths[self.current_index], 'rb').read())
+
+
+    async def go_to_image(self, event, index):
         """Go to specific image by index"""
         if self.old_thumbnail:
             self.old_thumbnail._style.clear()
@@ -73,7 +80,7 @@ class ImageSliderWidget:
         event.sender.style('outline: 2px solid black;')
         if 0 <= index < len(self.image_paths):
             self.current_index = index
-            self.on_loaded(open(self.image_paths[self.current_index], 'rb').read())
+            await self.on_loaded()
     
 
     def set_on_select_callback(self, callback):

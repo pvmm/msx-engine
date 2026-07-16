@@ -3,7 +3,6 @@ from PIL import Image
 import base64
 from io import BytesIO
 
-#import bmpto105
 from bmpto105 import BmpTo105, MSXBitmap_105
 
 import common
@@ -136,7 +135,11 @@ class TileViewer:
 
     def load_image(self, data: bytes) -> None:
         image = Image.open(BytesIO(data))
-        self.msx = self.engine.convert(image)
+        try:
+            self.msx = self.engine.convert(image)
+        except Exception as e:
+            ui.notify(e)
+            return
 
         # update tile info
         self.reuse_tiles, self.total_tiles = process_tiles(self.threshold, self.msx)
@@ -163,7 +166,7 @@ class TileViewer:
 
 
     def remove_image(self) -> None:
-        if self.image:
+        if self.msx:
             disable(self.grid_width_number)
             disable(self.grid_height_number)
             disable(self.threshold_number)
