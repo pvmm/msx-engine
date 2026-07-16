@@ -16,7 +16,7 @@ class ImageSliderWidget:
     def __init__(self, image_paths, width: int, height: int, on_loaded: Callable[[bytes], None], on_removed: Callable[[], None]):
         """
         Initialize the image slider widget
-        
+
         Args:
             image_paths: List of image file paths or directory path containing images
             width: Image width
@@ -29,7 +29,7 @@ class ImageSliderWidget:
         self.width = width
         self.height = height
         self.old_thumbnail = None
-        
+
         # Load images
         if isinstance(image_paths, str) and os.path.isdir(image_paths):
             # Load all images from directory
@@ -39,14 +39,14 @@ class ImageSliderWidget:
             self.image_paths.sort()
         else:
             self.image_paths = list(image_paths)
-        
+
         if not self.image_paths:
             ui.notify('No images found!', type='negative')
             return
-        
+
         # Create the UI
         self.build_ui()
-        
+
     def build_ui(self):
         """Create the widget UI"""
         with ui.card().classes('w-full items-center p-4'):
@@ -81,12 +81,12 @@ class ImageSliderWidget:
         if 0 <= index < len(self.image_paths):
             self.current_index = index
             await self.on_loaded()
-    
+
 
     def set_on_select_callback(self, callback):
         """Set callback function when an image is selected"""
         self.on_select_callback = callback
-    
+
 
     def get_all_images(self):
         """Get all image paths"""
@@ -113,5 +113,5 @@ if __name__ in {"__main__", "__mp_main__"}:
     # Create the widget
     widget = ImageSliderWidget("./samples")
     widget.set_on_select_callback(on_image_selected)
-    
+
     ui.run()
