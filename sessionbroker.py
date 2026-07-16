@@ -1,15 +1,18 @@
 import asyncio
 import functools
 from collections import defaultdict
-from typing import Callable, Dict, Set
+from typing import Awaitable, Callable, Dict, Set, ParamSpec, TypeVar
 from nicegui import ui
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
 class SessionBrokerManager:
-    def __init__(self):
+    def __init__(self) -> None:
         # Structure: { client_id: { channel: set(callbacks) } }
-        self._subscribers: Dict[str, Dict[str, Set[Callable]]] = defaultdict(lambda: defaultdict(set))
-        #self._subscribers: Dict[str, Dict[str, Set[Callable]]] = defaultdict()
+        self._subscribers: Dict[str, Dict[str, Set[Callable[[str], None]]]] = defaultdict(lambda: defaultdict(set))
 
 
     def get_client_id(self) -> str:
@@ -17,17 +20,17 @@ class SessionBrokerManager:
         return ui.context.client.id
 
 
-    def subscribe(self, channel: str, callback: Callable):
+    def subscribe(self, channel: str, callback: Callable[[str], None]) -> None:
         client_id = self.get_client_id()
         self._subscribers[client_id][channel].add(callback)
 
 
-    def unsubscribe(self, channel: str, callback: Callable):
+    def unsubscribe(self, channel: str, callback: Callable[[str], None]) -> None:
         client_id = self.get_client_id()
         self._subscribers[client_id][channel].discard(callback)
 
 
-    def publish_to_current_user(self, channel: str, payload: str):
+    def publish_to_current_user(self, channel: str, payload: str) -> None:
         """Publishes a payload strictly to the user belonging to the current execution context."""
         client_id = self.get_client_id()
         callbacks = list(self._subscribers[client_id][channel])
@@ -43,7 +46,7 @@ def show_waiting_dialog(message: str) -> ui.dialog:
         ui.spinner(size='lg').classes('mb-2')
         ui.label(message).classes('text-lg font-medium')
 
-    def handle_message(payload: str):
+    def handle_message(payload: str) -> None:
         '''what to do when task is done'''
         if payload == "CLOSE_DIALOG":
             waiting_dialog.close()
@@ -58,23 +61,27 @@ def show_waiting_dialog(message: str) -> ui.dialog:
     return waiting_dialog
 
 
-def display_task_dialog(message: str):
+def display_task_dialog(message: str) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     Decorator that automatically sends a completion message to the
     GLOBAL_BROKER targeting the specific user session that triggered it.
     """
-    def decorator(func: Callable):
+
+    def decorator(func: Callable[P, Awaitable[R]],) -> Callable[P, Awaitable[R]]:
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             show_waiting_dialog(message)
+
             # allow event loop to breathe
             await asyncio.sleep(0.1)
 
             try:
-                # execute task
                 return await func(*args, **kwargs)
             finally:
-                GLOBAL_BROKER.publish_to_current_user('WAITING_DIALOG', 'CLOSE_DIALOG')
+                GLOBAL_BROKER.publish_to_current_user(
+                    "WAITING_DIALOG",
+                    "CLOSE_DIALOG",
+                )
         return wrapper
     return decorator
 
