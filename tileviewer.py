@@ -191,7 +191,7 @@ class TileViewer:
         self.processing_tiles = True
         try:
             self.threshold = event.value
-            self.reuse_tiles, self.total_tiles = await run.cpu_bound(process_tiles, event.value, self.msx)
+            self.reuse_tiles, self.total_tiles = await run.io_bound(process_tiles, event.value, self.msx)
         finally:
             self.processing_tiles = False
             self.update_tile_info()
