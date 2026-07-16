@@ -82,7 +82,7 @@ class StageEditor(ui.row):
 
     def add_metatile(self, bgcolor_index: int) -> UiMetatile:
         with self.metatiles_row:
-            metatile = UiMetatile(Tile(15, bgcolor_index), PALETTE) \
+            metatile = UiMetatile(Tile(None, None, None), PALETTE) \
                     .move(target_index=0).on('mousedown', lambda e: self.on_select_metatile(e))
             return metatile
 
@@ -191,4 +191,4 @@ def main() -> None:
 
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run
-    run()
+    run('NiceGui app')

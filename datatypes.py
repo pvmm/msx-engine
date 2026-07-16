@@ -7,10 +7,6 @@ from v9918 import divide_colors, DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
 TILE_SIZE = 8
 
 
-# Disable debug
-debug = lambda *args : None # print(*args)
-
-
 #
 # Classes
 #
@@ -45,7 +41,6 @@ class TileRow:
 
     def __getitem__(self, x: int) -> int:
         """Return the foreground color index if the pixel is active, otherwise return the background color index."""
-        debug(f'{x=}, {self.bg=}, {self.fg=}')
         return self.fg[int(x // TILE_SIZE)] if self.pattern[x] else self.bg[int(x // TILE_SIZE)]
 
 
@@ -154,7 +149,7 @@ class Tile:
     rows: list[TileRow]
 
     @staticmethod
-    def copy(tile: Self) -> Self:
+    def copy(tile: Tile) -> Tile:
         self = Tile()
         for i, row in enumerate(tile.rows):
             self.rows[i].copy(row)
@@ -330,7 +325,7 @@ def from_105_to_metatile(data: list[int], width: int, height: int) -> Tile:
         c = divide_colors(b)
         fg.append(c[0])
         bg.append(c[1])
-    debug('l: pg0, fg, bg', len(p0), len(fg), len(bg))
-    debug('v: pg0, fg, bg', p0, fg, bg)
+    #debug('l: pg0, fg, bg', len(p0), len(fg), len(bg))
+    #debug('v: pg0, fg, bg', p0, fg, bg)
 
     return Tile(p0, fg, bg, width, height)

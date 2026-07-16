@@ -11,7 +11,7 @@ reload = bool(os.getenv('NICEGUI_RELOAD', 1))
 
 
 @app.head('/')
-async def root_head():
+async def root_head() -> Response:
     return Response(status_code=200)
 
 

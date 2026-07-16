@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 from nicegui import ui
-from common import UiMetatile
+from ui import UiMetatile
 
 from stageeditor import StageEditor
 
@@ -38,4 +38,4 @@ def main() -> None:
 
 if __name__ in {'__main__', '__mp_main__'}:
     from common import run
-    run()
+    run('NiceGui App')

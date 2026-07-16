@@ -3,18 +3,21 @@ import json
 import base64
 
 from io import BytesIO
-from collections.abc import Callable
+from typing import Callable, TypeVar
 from nicegui import ui, events, app
 from nicegui.elements.mixins.disableable_element import DisableableElement
 
 from datatypes import Tile
 
 
+# Type info
+
+P = TypeVar("P")
+
 # app-wide globals
 SCREEN_WIDTH: int = 0
 SCREEN_HEIGHT: int = 0
 resize_event_subscribers: dict[str, Callable[[], None]] = {}
-
 
 def file_to_base64(buffer: BytesIO) -> str:
     #image = Image.open(BytesIO(image))
@@ -119,19 +122,19 @@ def menu_item(element: ui.element) -> ui.element:
     return element.classes('mx-4')
 
 
-def disable(element: DisableableElement | ui.element) -> ui.element:
+def disable(element: DisableableElement | ui.element | P) -> DisableableElement | ui.element | P:
     """Short cut to disable an element for any type of ui.element"""
     return enable(element, False)
 
 
-def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.element:
+def enable(element: DisableableElement | ui.element | P, status: bool = True) -> DisableableElement | ui.element | P:
     """Enable/disable an element for any type of ui.element"""
     if isinstance(element, DisableableElement):
         if status:
             element.enable()
         else:
             element.disable()
-    else:
+    elif isinstance(element, ui.element):
         for slot in element.slots:
             for child in element.default_slot.children:
                 enable(child, status)
@@ -139,4 +142,6 @@ def enable(element: DisableableElement | ui.element, status: bool = True) -> ui.
             element._props.pop('disabled')
         else:
             element.props('disabled')
+    else:
+        raise TypeError(F'don\'t know how to enable/disable type {type(element)}')
     return element

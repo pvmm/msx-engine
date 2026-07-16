@@ -1,22 +1,23 @@
 import glob
 import os
 
-from collections.abc import Callable
-from nicegui import ui
+from typing import Callable, cast
+from nicegui import ui, events
 from pathlib import Path
 from fileloader import FileLoader
 from sessionbroker import display_task_dialog
 
 
 class ImageSliderWidget:
-    on_loaded_callback: Callable
-    on_removed_callback: Callable
-    current_index: int
+    image_paths: list[str] | str
+    on_loaded_callback: Callable[[bytes], None]
+    on_removed_callback: Callable[[], None]
+    current_index: int | None
     width: int
     height: int
-    old_thumbnail: ui.card
+    old_thumbnail: ui.card | None
 
-    def __init__(self, image_paths, width: int, height: int, on_loaded: Callable[[bytes], None], on_removed: Callable[[], None]):
+    def __init__(self, image_paths: list[str] | str, width: int, height: int, on_loaded: Callable[[bytes], None], on_removed: Callable[[], None]) -> None:
         """
         Initialize the image slider widget
 
@@ -50,7 +51,7 @@ class ImageSliderWidget:
         # Create the UI
         self.build_ui()
 
-    def build_ui(self):
+    def build_ui(self) -> None:
         """Create the widget UI"""
         with ui.card().classes('w-full items-center p-4'):
             # Counter
@@ -71,50 +72,28 @@ class ImageSliderWidget:
 
 
     @display_task_dialog("Loading image...")
-    async def on_loaded(self):
-        self.on_loaded_callback(open(self.image_paths[self.current_index], 'rb').read())
+    async def on_loaded(self) -> None:
+        if self.current_index:
+            self.on_loaded_callback(open(self.image_paths[self.current_index], 'rb').read())
 
 
-    async def go_to_image(self, event, index):
+    async def go_to_image(self, event: events.GenericEventArguments, index: int) -> None:
         """Go to specific image by index"""
         if self.old_thumbnail:
             self.old_thumbnail._style.clear()
-        self.old_thumbnail = event.sender
+        self.old_thumbnail = cast(ui.card, event.sender)
         event.sender.style('outline: 2px solid black;')
         if 0 <= index < len(self.image_paths):
             self.current_index = index
             await self.on_loaded()
 
 
-    def set_on_select_callback(self, callback):
+    def set_on_select_callback(self, callback: Callable[[int, str], None]) -> None:
         """Set callback function when an image is selected"""
         self.on_select_callback = callback
 
 
-    def get_all_images(self):
+    def get_all_images(self) -> list[str] | str:
         """Get all image paths"""
         return self.image_paths
 
-
-# Alternative usage with specific image paths
-def create_with_specific_images():
-    """Create widget with specific image paths"""
-    image_paths = [
-        'path/to/image1.jpg',
-        'path/to/image2.jpg',
-        'path/to/image3.jpg',
-    ]
-    return ImageSliderWidget(image_paths)
-
-
-# Main app
-if __name__ in {"__main__", "__mp_main__"}:
-    # Set callback for selection
-    def on_image_selected(index, path):
-        print(f"Selected image {index + 1}: {path}")
-
-    # Create the widget
-    widget = ImageSliderWidget("./samples")
-    widget.set_on_select_callback(on_image_selected)
-
-    ui.run()

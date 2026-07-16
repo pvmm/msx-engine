@@ -231,7 +231,7 @@ class Project:
         with self.tiles_row:
             tooltip = f'color #{bg_color} ({PALETTE[bg_color]})'
             self.background_tiles.append(
-                self.select_tile(UiMetatile(Tile(DEFAULT_FG_COLOR, bg_color), PALETTE)
+                self.select_tile(UiMetatile(Tile(None, None, None), PALETTE)
                         .classes('no-select')
                         .on('mousedown', lambda e: self.on_select_tile(e)).tooltip(tooltip))
             )
@@ -398,4 +398,4 @@ def main() -> None:
 
 if __name__ in {"__main__", "__mp_main__"}:
     from common import run
-    run()
+    run('NiceGui app')

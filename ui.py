@@ -7,7 +7,9 @@ from nicegui import ui
 from nicegui.elements.interactive_image import InteractiveImage
 
 from datatypes import Tile
-from v9918 import DEFAULT_FG_COLOR, DEFAULT_BG_COLOR
+from v9918 import DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE
+from constants import GRID_PIXEL_SIZE
+from common import get_text_color
 
 
 class UiPixel(ui.card):
@@ -16,6 +18,7 @@ class UiPixel(ui.card):
     fg: int = DEFAULT_FG_COLOR
     bg: int = DEFAULT_BG_COLOR
     initialized: bool = False
+    scale: int
 
     # ui elements
     inner: ui.card
