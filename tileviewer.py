@@ -137,7 +137,12 @@ class TileViewer:
 
 
     def load_image(self, data: bytes) -> None:
-        image = Image.open(BytesIO(data)).convert("RGB")
+        try:
+            image = Image.open(BytesIO(data)).convert("RGB")
+        except Exception as e:
+            ui.notify(e)
+            return
+
         self.set_image(image)
 
 
