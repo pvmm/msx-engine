@@ -34,10 +34,9 @@ class TileViewer:
     selected_x: int
     selected_y: int
     msx: MSXBitmap_105 | None
-    image: Image.Image
-    image0: Image.Image
-    image1: Image.Image
-    image64: str
+    image: list[Image.Image]
+    image64: list[str]
+    current_frame : int
 
     ui.add_css('''
         .pixelated {
@@ -52,6 +51,7 @@ class TileViewer:
     threshold_number: ui.number
     reuse_badges: list[ui.badge]
     total_badges: list[ui.badge]
+    frame_toggle: ui.toggle
 
     def __init__(self, image: Image.Image | None = None) -> None:
         self.msx = None
@@ -71,55 +71,58 @@ class TileViewer:
 
     def build_ui(self) -> None:
         ui.add_head_html('<script src="/static/tileviewer.js"></script>', shared=True)
-        with ui.column().classes('w-full h-screen'):
+        with ui.column().classes('w-full h-screen items-center'):
             ImageSliderWidget('./samples', 256, 192, on_loaded=self.load_image, on_removed=self.remove_image)
+
+            with ui.row().classes('items-start flex-nowrap w-full'):
+                self.frame_toggle = disable(ui.toggle({1: 'even frame', 2: 'odd frame', 3: 'combined'}, value=3,
+                                                      on_change=lambda e: self.draw_frame(int(e.value))))
+
+                (
+                    ui.slider(min=1, max=16, value=self.zoom, step=1,
+                              on_change=lambda e: self.set_zoom(int(e.value)))
+                        .props('reverse').classes('w-[100px]')
+                )
+
+                ui.space()
+
+                self.grid_width_number = cast(ui.number, disable(
+                    ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
+                              on_change=lambda e: self.on_change_grid_size('w', e),
+                              validation={'metatile size mismatch': lambda value: self.image[0].size[0] % value == 0})
+                ))
+                self.grid_height_number = cast(ui.number, disable(
+                    ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
+                              on_change=lambda e: self.on_change_grid_size('h', e),
+                             validation={'metatile size mismatch': lambda value: self.image[0].size[1] % value == 0})
+                ))
 
             with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
                 canvas = (
                     ui.element('canvas').props('id=tile_canvas').on('contextmenu.prevent', lambda: None)
                 )
 
-            with ui.row().classes('items-end flex-nowrap w-full') as parent:
-                (
-                    ui.slider(min=1, max=16, value=self.zoom, step=1,
-                              on_change=lambda e: self.set_zoom(int(e.value)))
-                        .props('vertical reverse')
-                        .classes('h-[120px]')
-                )
+            with ui.column().classes('items-start flex-nowrap w-full'):
+                self.reuse_badges = []
+                self.total_badges = []
+                with ui.row().classes('flex-nowrap items-center'):
+                    ui.label('Tiles reused:')
+                    self.reuse_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
+                    ui.label('/')
+                    self.reuse_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
+                    ui.label('/')
+                    self.reuse_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
+                    ui.label('Tiles total:')
+                    self.total_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
+                    ui.label('/')
+                    self.total_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
+                    ui.label('/')
+                    self.total_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
 
-                with ui.column().classes('items-start flex-nowrap w-full'):
-
-                    self.reuse_badges = []
-                    self.total_badges = []
-                    with ui.row().classes('flex-nowrap items-center'):
-                        ui.label('Tiles reused:')
-                        self.reuse_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
-                        ui.label('/')
-                        self.reuse_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
-                        ui.label('/')
-                        self.reuse_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
-                        ui.label('Tiles total:')
-                        self.total_badges.append(ui.badge('0', color='purple').tooltip('top 64x8 tiles'))
-                        ui.label('/')
-                        self.total_badges.append(ui.badge('0', color='purple').tooltip('middle 64x8 tiles'))
-                        ui.label('/')
-                        self.total_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
-
-                    with ui.row().classes('items-start flex-nowrap w-full'):
-                        self.grid_width_number = cast(ui.number, disable(
-                                ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
-                                          on_change=lambda e: self.on_change_grid_size('w', e),
-                                          validation={'metatile size mismatch': lambda value: self.image.size[0] % value == 0})
-                        ))
-                        self.grid_height_number = cast(ui.number, disable(
-                                ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
-                                          on_change=lambda e: self.on_change_grid_size('h', e),
-                                          validation={'metatile size mismatch': lambda value: self.image.size[1] % value == 0})
-                        ))
-                        self.threshold_number = cast(ui.number, disable(
-                                ui.number(label='DCT Threshold', min=0.0, value=0.0, step=0.1, max=1.0, format='%0.1f',
-                                          on_change=self.on_change_threshold).classes('w-[170px]').props('debounce=500')
-                        ))
+                self.threshold_number = cast(ui.number, disable(
+                        ui.number(label='DCT Threshold', min=0.0, value=0.0, step=0.1, max=1.0, format='%0.1f',
+                                  on_change=self.on_change_threshold).classes('w-[170px]').props('debounce=500')
+                ))
 
 
         ui.on("tile_clicked", self.on_tile_clicked)
@@ -156,25 +159,33 @@ class TileViewer:
         # update tile info
         self.reuse_tiles, self.total_tiles = process_tiles(self.threshold, self.msx)
         self.update_tile_info()
+        self.image = [None] * 4
+        self.image64 = [None] * 4
 
-        buffer = BytesIO()
-        self.image = self.msx.to_image()
-        self.image.save(buffer, format='PNG')
-        self.image64 = file_to_base64(buffer)
+        # create all frames (1 = even, 2 = odd, 3 = combined) at once
+        for n in range(1, 4):
+            buffer = BytesIO()
+            self.image[n] = self.msx.to_image(n)
+            self.image[n].save(buffer, format='PNG')
+            self.image64[n] = file_to_base64(buffer)
+        self.draw_frame(3)
 
+        # enable all widgets
         self.grid_width_number.set_value(8);
         enable(self.grid_width_number)
-
         self.grid_height_number.set_value(8);
         enable(self.grid_height_number)
-
         self.threshold_number.set_value(0.0);
         enable(self.threshold_number)
+        enable(self.frame_toggle)
 
+
+    def draw_frame(self, frame: int = 3) -> None:
+        self.current_frame = frame
         ui.run_javascript(f"""
             window.tileViewer.initialize({{
                 canvasId: "tile_canvas",
-                image: "{self.image64}",
+                image: "{self.image64[frame]}",
                 zoom: {self.zoom}
             }});
         """)
@@ -243,7 +254,7 @@ class TileViewer:
                                     int(self.grid_width / 8), self.grid_height, frame)
         metatiles = from_105_to_metatile(data, self.grid_width, self.grid_height)
 
-        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image.size[0] * GRID_PIXEL_MAX)
+        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image[0].size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
             editor = TileEditor(parent, metatiles)
             with ui.row().classes('w-full justify-end'):
