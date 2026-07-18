@@ -11,7 +11,7 @@ from common import add_handlers, file_to_base64, disable, enable
 
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
-from datatypes import Tile, from_105_to_metatile
+from datatypes import Tile, from_105_to_metatile, TILE_SIZE
 from tileeditor import TileEditor
 from imageslider import ImageSliderWidget
 
@@ -25,6 +25,7 @@ PALETTE = [
 
 class TileViewer:
     processing_tiles: bool
+    waiting_tile_editor: bool
     reuse_tiles: list[int]
     total_tiles: list[int]
     threshold: float
@@ -36,7 +37,7 @@ class TileViewer:
     msx: MSXBitmap_105 | None
     image: list[Image.Image]
     image64: list[str]
-    current_frame : int
+    current_frame: int
 
     ui.add_css('''
         .pixelated {
@@ -57,6 +58,7 @@ class TileViewer:
         self.msx = None
         if image: self.set_image(image)
         self.processing_tiles = False
+        self.waiting_tile_editor = False
         self.engine = BmpTo105(PALETTE)
         self.reuse_tiles = [0, 0, 0]
         self.total_tiles = [0, 0, 0]
@@ -89,12 +91,12 @@ class TileViewer:
                 self.grid_width_number = cast(ui.number, disable(
                     ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
                               on_change=lambda e: self.on_change_grid_size('w', e),
-                              validation={'metatile size mismatch': lambda value: self.image[0].size[0] % value == 0})
+                              validation={'metatile size mismatch': lambda value: self.image[1].size[0] % value == 0})
                 ))
                 self.grid_height_number = cast(ui.number, disable(
                     ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
                               on_change=lambda e: self.on_change_grid_size('h', e),
-                             validation={'metatile size mismatch': lambda value: self.image[0].size[1] % value == 0})
+                             validation={'metatile size mismatch': lambda value: self.image[1].size[1] % value == 0})
                 ))
 
             with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
@@ -186,9 +188,14 @@ class TileViewer:
             window.tileViewer.initialize({{
                 canvasId: "tile_canvas",
                 image: "{self.image64[frame]}",
-                zoom: {self.zoom}
+                selectedX: {self.selected_x},
+                selectedY: {self.selected_y},
+                gridWidth: {self.grid_width},
+                gridHeight: {self.grid_height},
+                zoom: {self.zoom},
             }});
         """)
+        self.redraw()
 
 
     def remove_image(self) -> None:
@@ -205,8 +212,8 @@ class TileViewer:
 
     def on_change_grid_size(self, type: str, event: events.ValueChangeEventArguments[int | None]) -> None:
         if self.msx:
-            if type == 'w': self.grid_width = cast(int, event.value)
-            if type == 'h': self.grid_height = cast(int, event.value)
+            if type == 'w': self.grid_width = int(event.value)
+            if type == 'h': self.grid_height = int(event.value)
             self.redraw()
 
 
@@ -216,8 +223,8 @@ class TileViewer:
             return
         self.processing_tiles = True
         try:
-            self.threshold = cast(float, event.value)
-            self.reuse_tiles, self.total_tiles = await run.io_bound(process_tiles, cast(float, event.value), self.msx)
+            self.threshold = float(event.value)
+            self.reuse_tiles, self.total_tiles = await run.io_bound(process_tiles, float(event.value), self.msx)
         finally:
             self.processing_tiles = False
             self.update_tile_info()
@@ -227,11 +234,11 @@ class TileViewer:
     def redraw(self) -> None:
         ui.run_javascript(f"""
             window.tileViewer.setState({{
-                zoom: {self.zoom},
                 selectedX: {self.selected_x},
                 selectedY: {self.selected_y},
                 gridWidth: {self.grid_width},
-                gridHeight: {self.grid_height}
+                gridHeight: {self.grid_height},
+                zoom: {self.zoom},
             }});
             window.tileViewer.draw();
         """)
@@ -243,24 +250,30 @@ class TileViewer:
 
 
     async def on_tile_clicked(self, e: events.GenericEventArguments) -> None:
+        if self.waiting_tile_editor:
+            return
+        self.waiting_tile_editor = True
         if not self.msx:
             return
-        self.selected_x = e.args['col'] * self.grid_width
-        self.selected_y = e.args['row'] * self.grid_height
+
+        self.selected_x = int(e.args['x'] // self.grid_width) * self.grid_width
+        self.selected_y = int(e.args['y'] // self.grid_height) * self.grid_height
         self.redraw()
 
-        frame = int(e.args['button'] // 2)
-        data = self.msx.to_metatile(e.args['col'], e.args['row'] * self.grid_height,
-                                    int(self.grid_width / 8), self.grid_height, frame)
+        frame = 1 + int(e.args['button'] // 2)
+        data = self.msx.to_metatile(int(self.selected_x // TILE_SIZE), int(self.selected_y // TILE_SIZE * TILE_SIZE),
+                                    int(self.grid_width // TILE_SIZE), self.grid_height, frame)
+        # Fix here
         metatiles = from_105_to_metatile(data, self.grid_width, self.grid_height)
 
-        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image[0].size[0] * GRID_PIXEL_MAX)
+        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image[1].size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
             editor = TileEditor(parent, metatiles)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
                 ui.button('Cancel', on_click=lambda: dialog.submit(False))
         result = await dialog
+        self.waiting_tile_editor = False
 
 
 def process_tiles(threshold: float, msx: MSXBitmap_105) -> tuple[list[int], list[int]]:

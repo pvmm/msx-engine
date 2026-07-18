@@ -7,11 +7,11 @@ TileViewer = class {
         this.canvas = document.getElementById(options.canvasId);
         this.ctx = this.canvas.getContext("2d");
         this.ctx.imageSmoothingEnabled = false;
+        this.selectedX = options.selectedX;
+        this.selectedY = options.selectedY;
+        this.gridWidth = options.gridWidth;
+        this.gridHeight = options.gridHeight;
         this.zoom = options.zoom;
-        this.gridWidth = 8;
-        this.gridHeight = 8;
-        this.selectedX = -1;
-        this.selectedY = -1;
         this.image = new Image();
         this.image.onload = () => {
             this.draw();
@@ -87,8 +87,8 @@ TileViewer = class {
 
     canvasToTile(x, y) {
         return {
-            col: Math.floor(x / (this.gridWidth * this.zoom)),
-            row: Math.floor(y / (this.gridHeight * this.zoom))
+            x: Math.floor(x / this.zoom),
+            y: Math.floor(y / this.zoom),
         };
     }
 
