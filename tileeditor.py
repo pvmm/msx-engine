@@ -8,7 +8,7 @@ from nicegui import ui, events
 
 from constants import GRID_PIXEL_SIZE, GRID_PIXEL_MAX, GRID_PIXEL_MIN
 from common import header, header2, get_text_color, menu_item, enable, subscribe_to_resize_event, add_handlers
-from ui import UiPixel, UiMetatile
+from ui import UiPixel
 from datatypes import Tile
 from v9918 import DEFAULT_FG_COLOR, DEFAULT_BG_COLOR, PALETTE, divide_colors, TILE_SIZE
 
@@ -94,8 +94,6 @@ class TileEditor(ui.element):
     # combined brush
     dragging: bool = False
     dragging_on_pixel: bool = False
-    # display tile in 105 color mode
-    _105_color_mode: bool = False
     # display confirmation dialog when erasing pattern
     confirm_erasing: bool = True
     # hide background colour when pixel is visible and foreground colour when it's not
@@ -114,15 +112,12 @@ class TileEditor(ui.element):
     colorbrush: ui.button
     eraser: ui.button
     inverter: ui.button
-    odd_grid_container: ui.scroll_area
-    even_grid_container: ui.scroll_area
+    grid_container: ui.scroll_area
     pixel_refs: list[list[UiPixel]]
     bg_color_refs: list[list[ui.element]]
     fg_color_refs: list[list[ui.element]]
     release_shift_left: asyncio.Event
     release_shift_right: asyncio.Event
-    odd_frame_tab: ui.element
-    metatile: UiMetatile
     textarea: ui.textarea
 
 
@@ -168,10 +163,6 @@ class TileEditor(ui.element):
                 with ui.button(icon='menu'):
                     with ui.menu().props('auto-close'):
                         with ui.column().classes('p-3'):
-                            text = 'render tile in 105 color mode'
-                            self._105_color_mode_switch = menu_item(
-                                    ui.switch('105 color mode', value=self._105_color_mode,
-                                            on_change=self.on_toggle_105_color_mode)).tooltip(text)
                             text = 'display a confirmation dialog before erasing the tile data'
                             menu_item(ui.switch('Confirm before erasing', value=self.confirm_erasing,
                                     on_change=self.on_toggle_confirm_erasing)).tooltip(text)
@@ -187,21 +178,7 @@ class TileEditor(ui.element):
                     self.build_palette()
                 # right side panels: grids and export tools
                 with ui.column().classes('w-full gap-0'):
-                    header2('Result')
-                    self.metatile = UiMetatile(self.grid, PALETTE) \
-                        .on('click', lambda: self.metatile.reload(self.grid))
-                    with ui.tabs() as tabs:
-                        ui.tab('0', label='Even frame')
-                        self. odd_frame_tab = enable(
-                            ui.tab('1', label='Odd frame'), self._105_color_mode
-                        )
-
-                    with ui.tab_panels(tabs, value='0').classes('w-full') as self.tabs:
-                        with ui.tab_panel('0').classes('p-0 m-0'):
-                            self.odd_grid_container = self.build_grid(self.grid)
-                        with ui.tab_panel('1').classes('p-0 m-0'):
-                            self.even_grid_container = self.build_grid(self.grid)
-
+                    self.grid_container = self.build_grid(self.grid)
                     size = (GRID_PIXEL_MAX - GRID_PIXEL_MIN) * 3
                     ui.slider(min=GRID_PIXEL_MIN, max=GRID_PIXEL_MAX, value=GRID_PIXEL_SIZE) \
                             .on('change', lambda e: self.on_update_scale_slider(e)).style(f'width: {size}px') \
@@ -337,13 +314,6 @@ class TileEditor(ui.element):
                             .on('contextmenu.prevent', partial(self.on_select_bg_color, index=index))
                     if sel & 1: self.last_fg_button = button
                     if sel & 2: self.last_bg_button = button
-
-
-    def on_toggle_105_color_mode(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
-        if event.value is not None:
-            self._105_color_mode = event.value
-            self.tabs.set_value('0')
-            enable(self.odd_frame_tab, event.value)
 
 
     def on_toggle_confirm_erasing(self, event: events.ValueChangeEventArguments[bool | None]) -> None:
