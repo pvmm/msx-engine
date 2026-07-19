@@ -12,6 +12,7 @@ TILE_SIZE = 8
 #
 
 class TileRow:
+    '''row of a metatile can be any size and multiple of 8'''
     pattern: list[bool]
     fg: list[int]
     bg: list[int]
@@ -31,7 +32,7 @@ class TileRow:
             bin = ''
             for value in self.pattern[x * TILE_SIZE: (x + 1) * TILE_SIZE]:
                 bin += '1' if value else '0'
-            s += f'(p:{bin},c:{hex(self.fg[x])}:{hex(self.bg[x])})\n'
+            s += f'(p:{bin},c:{self.fg[x]:02x}|{self.bg[x]:02x})\n'
         return s
 
 

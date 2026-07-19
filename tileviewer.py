@@ -4,9 +4,8 @@ from PIL import Image
 import base64
 from io import BytesIO
 
-from bmpto105 import BmpTo105, MSXBitmap_105
-
 import common
+
 from common import add_handlers, file_to_base64, disable, enable
 
 from constants import GRID_PIXEL_MAX
@@ -14,6 +13,8 @@ from fileloader import FileLoader
 from datatypes import Tile, from_105_to_metatile, TILE_SIZE
 from tileeditor import TileEditor
 from imageslider import ImageSliderWidget
+
+from bmpto105 import BmpTo105, MSXBitmap_105
 
 
 PALETTE = [
@@ -148,10 +149,10 @@ class TileViewer:
             ui.notify(e)
             return
 
-        self.set_image(image)
+        self.set_image(image, frame=3)
 
 
-    def set_image(self, image: Image.Image) -> None:
+    def set_image(self, image: Image.Image, frame: int = 3) -> None:
         try:
             self.msx = self.engine.convert(image)
         except Exception as e:
@@ -161,16 +162,12 @@ class TileViewer:
         # update tile info
         self.reuse_tiles, self.total_tiles = process_tiles(self.threshold, self.msx)
         self.update_tile_info()
+
+        # reset visible images
         self.image = [None] * 4
         self.image64 = [None] * 4
 
-        # create all frames (1 = even, 2 = odd, 3 = combined) at once
-        for n in range(1, 4):
-            buffer = BytesIO()
-            self.image[n] = self.msx.to_image(n)
-            self.image[n].save(buffer, format='PNG')
-            self.image64[n] = file_to_base64(buffer)
-        self.draw_frame(3)
+        self.render_images(frame)
 
         # enable all widgets
         self.grid_width_number.set_value(8);
@@ -180,6 +177,16 @@ class TileViewer:
         self.threshold_number.set_value(0.0);
         enable(self.threshold_number)
         enable(self.frame_toggle)
+
+
+    def render_images(self, frame):
+        # create all frames (1 = even, 2 = odd, 3 = combined) at once
+        for n in range(1, 4):
+            buffer = BytesIO()
+            self.image[n] = self.msx.to_image(n)
+            self.image[n].save(buffer, format='PNG')
+            self.image64[n] = file_to_base64(buffer)
+        self.draw_frame(frame)
 
 
     def draw_frame(self, frame: int = 3) -> None:
@@ -264,15 +271,26 @@ class TileViewer:
         data = self.msx.to_metatile(int(self.selected_x // TILE_SIZE), int(self.selected_y // TILE_SIZE * TILE_SIZE),
                                     int(self.grid_width // TILE_SIZE), self.grid_height, frame)
         # Fix here
-        metatiles = from_105_to_metatile(data, self.grid_width, self.grid_height)
+        metatile = from_105_to_metatile(data, self.grid_width, self.grid_height)
 
         width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image[1].size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
-            editor = TileEditor(parent, metatiles)
+            editor = TileEditor(parent, metatile)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
                 ui.button('Cancel', on_click=lambda: dialog.submit(False))
-        result = await dialog
+        if await dialog:
+            for y, row in enumerate(editor.grid):
+                z = []
+                fg, bg = None, None
+                for x in range(len(row)):
+                    if x % TILE_SIZE == 0:
+                        fg, bg = row.get_fg(x), row.get_bg(x)
+                    b = True if row[x] == fg else False
+                    self.msx[y + self.selected_y][(x + self.selected_x) // TILE_SIZE].from_rgb(x, b, fg, bg, frame)
+                    z.append(b)
+                print(f'{y}: {z=}')
+            self.render_images(self.current_frame)
         self.waiting_tile_editor = False
 
 

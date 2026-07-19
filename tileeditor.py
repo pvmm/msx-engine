@@ -440,7 +440,6 @@ class TileEditor(ui.element):
 
     def on_undrag_on_grid(self, event: events.GenericEventArguments, x: int, y: int) -> None:
         self.old_buttons = event.args['buttons']
-        self.metatile.reload(self.grid)
         self.dragging = False
 
 
