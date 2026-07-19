@@ -12,6 +12,17 @@ from constants import GRID_PIXEL_SIZE
 from common import get_text_color
 
 
+class BoolStatus:
+    def __init__(self, status: bool = False):
+        self.is_valid = status
+
+    def enable(self):
+        self.is_valid = True
+
+    def disable(self):
+        self.is_valid = False
+
+
 class UiPixel(ui.card):
     # attributes
     value: bool = False

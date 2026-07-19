@@ -61,3 +61,4 @@ scipy==1.18.0
 scipy-stubs==1.18.0.1
 pillow==12.2.0
 optype==0.18.0
+webcolors==25.10.0

@@ -6,8 +6,9 @@ from io import BytesIO
 
 import common
 
-from common import add_handlers, file_to_base64, disable, enable
+from common import add_handlers, file_to_base64, disable, enable, get_text_color
 
+from ui import BoolStatus
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
 from datatypes import Tile, from_105_to_metatile, TILE_SIZE
@@ -39,6 +40,7 @@ class TileViewer:
     image: list[Image.Image]
     image64: list[str]
     current_frame: int
+    allow_save: BoolStatus
 
     ui.add_css('''
         .pixelated {
@@ -60,6 +62,7 @@ class TileViewer:
         if image: self.set_image(image)
         self.processing_tiles = False
         self.waiting_tile_editor = False
+        self.allow_save = BoolStatus()
         self.engine = BmpTo105(PALETTE)
         self.reuse_tiles = [0, 0, 0]
         self.total_tiles = [0, 0, 0]
@@ -86,6 +89,8 @@ class TileViewer:
                               on_change=lambda e: self.set_zoom(int(e.value)))
                         .props('reverse').classes('w-[100px]')
                 )
+
+                ui.button('save image', on_click=self.on_save_image_clicked).bind_enabled_from(self.allow_save, 'is_valid')
 
                 ui.space()
 
@@ -132,13 +137,20 @@ class TileViewer:
 
 
     def update_tile_info(self) -> None:
+        self.allow_save.enable()
         for n in range(3):
             self.reuse_badges[n].set_text(str(self.reuse_tiles[n]))
-            bg = 'red' if self.total_tiles[n] > 255 else ('yellow' if self.total_tiles[n] > 200 else 'green')
-            fg = 'black' if bg == 'yellow' else 'white'
-            self.total_badges[n].set_text_color(fg)
+            if self.total_tiles[n] > 255:
+                bg = 'red'
+                self.allow_save.disable()
+            elif self.total_tiles[n] > 200:
+                bg = 'yellow'
+            else:
+                bg = 'green'
+            self.total_badges[n].set_text_color(get_text_color(bg))
             self.total_badges[n].set_background_color(bg)
             self.total_badges[n].set_text(str(self.total_tiles[n]))
+
         enable(self.threshold_number)
 
 
@@ -236,6 +248,10 @@ class TileViewer:
             self.processing_tiles = False
             self.update_tile_info()
             enable(self.threshold_number)
+
+
+    def on_save_image_clicked(self):
+        ui.download.content(self.msx.save(BytesIO()).getvalue(), 'image.si2')
 
 
     def redraw(self) -> None:

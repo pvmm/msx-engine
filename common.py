@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import webcolors
 
 from io import BytesIO
 from typing import Callable, TypeVar
@@ -109,10 +110,13 @@ def hex_to_rgb(hex_string: str) -> tuple[int, int, int]:
     return (r, g, b)
 
 
-def get_text_color(bg_color: str) -> str:
-    'Returns a text color that is distinct from background color'
-    if bg_color == 'transparent': bg_color = "#686868"
-    r, g, b = hex_to_rgb(bg_color)
+def get_text_color(bg: str) -> str:
+    'Returns white/black text color that best matches the specified background color'
+    if bg == 'transparent': bg = "#686868"
+    try:
+        r, g, b = hex_to_rgb(webcolors.name_to_hex(bg))
+    except ValueError:
+        r, g, b = hex_to_rgb(bg)
     luma: float = (r * 0.299 + g * 0.587 + b * 0.114) / 255
     return 'black' if luma > 0.5 else 'white'
 
