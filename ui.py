@@ -1,8 +1,7 @@
 import json
 import urllib
 
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Callable, Self
 from nicegui import ui
 from nicegui.elements.interactive_image import InteractiveImage
 
@@ -13,16 +12,49 @@ from common import get_text_color
 
 
 class BoolStatus:
-    is_enabled: bool
+    _is_enabled: bool | None
+    function: Callable[[object], bool]
 
-    def __init__(self, start_as: bool = False):
-        self.is_enabled = status
+    def __init__(self, inherent_state: bool | None = None, function: Callable[[object], bool] | None = None, debug: bool = False):
+        self._is_enabled = inherent_state
+        self.function = function
+        self.debug = debug
 
     def enable(self):
-        self.is_enabled = True
+        self._is_enabled = True
 
     def disable(self):
-        self.is_enabled = False
+        self._is_enabled = False
+
+    @property
+    def is_enabled(self) -> Bool:
+        if self.inherent_state:
+            return self._is_enabled
+        if not self.function is None:
+            return self.function()
+        raise ValueError('not possible to determine status')
+
+    @property
+    def is_disabled(self) -> Bool:
+        if self.inherent_state:
+            return not self._is_enabled
+        if not self.function is None:
+            return not self.function()
+        raise ValueError('not possible to determine status')
+
+    @property
+    def inherent_state(self) -> Bool:
+        return not self._is_enabled is None
+
+    @is_enabled.setter
+    def is_enabled(self, b: bool) -> None:
+        self._is_enabled = b
+
+    def __str__(self):
+        return str(self.is_enabled)
+
+    def __bool__(self):
+        return self.is_enabled
 
 
 class UiPixel(ui.card):
