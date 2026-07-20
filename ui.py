@@ -13,14 +13,16 @@ from common import get_text_color
 
 
 class BoolStatus:
-    def __init__(self, status: bool = False):
-        self.is_valid = status
+    is_enabled: bool
+
+    def __init__(self, start_as: bool = False):
+        self.is_enabled = status
 
     def enable(self):
-        self.is_valid = True
+        self.is_enabled = True
 
     def disable(self):
-        self.is_valid = False
+        self.is_enabled = False
 
 
 class UiPixel(ui.card):

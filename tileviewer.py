@@ -90,7 +90,7 @@ class TileViewer:
                         .props('reverse').classes('w-[100px]')
                 )
 
-                ui.button('save image', on_click=self.on_save_image_clicked).bind_enabled_from(self.allow_save, 'is_valid')
+                ui.button('save image', on_click=self.on_save_image_clicked).bind_enabled_from(self.allow_save, 'is_enabled')
 
                 ui.space()
 
