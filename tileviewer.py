@@ -26,8 +26,8 @@ PALETTE = [
 
 
 class TileViewer:
-    processing_tiles: bool
-    waiting_tile_editor: bool
+    threshold_status: BoolStatus
+    waiting_tile_editor: BoolStatus
     reuse_tiles: list[int]
     total_tiles: list[int]
     threshold: float
@@ -60,9 +60,16 @@ class TileViewer:
     def __init__(self, image: Image.Image | None = None) -> None:
         self.msx = None
         if image: self.set_image(image)
-        self.processing_tiles = False
-        self.waiting_tile_editor = False
-        self.allow_save = BoolStatus()
+
+        b = BoolStatus(inherent_state=False, function=lambda: (not self.msx is None))
+        self.threshold_status = b
+
+        c = BoolStatus(inherent_state=False, function=lambda: (not self.msx is None))
+        self.waiting_tile_editor = c
+
+        d = BoolStatus(function=lambda: (not self.msx is None) and all([n < 256 for n in self.total_tiles]))
+        self.allow_save = d
+
         self.engine = BmpTo105(PALETTE)
         self.reuse_tiles = [0, 0, 0]
         self.total_tiles = [0, 0, 0]
@@ -127,22 +134,21 @@ class TileViewer:
                     ui.label('/')
                     self.total_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
 
-                self.threshold_number = cast(ui.number, disable(
+                self.threshold_number = cast(ui.number, 
                         ui.number(label='DCT Threshold', min=0.0, value=0.0, step=0.1, max=1.0, format='%0.1f',
                                   on_change=self.on_change_threshold).classes('w-[170px]').props('debounce=500')
-                ))
+                            .bind_enabled_from(self.threshold_status, 'is_enabled')
+                )
 
 
         ui.on("tile_clicked", self.on_tile_clicked)
 
 
     def update_tile_info(self) -> None:
-        self.allow_save.enable()
         for n in range(3):
             self.reuse_badges[n].set_text(str(self.reuse_tiles[n]))
             if self.total_tiles[n] > 255:
                 bg = 'red'
-                self.allow_save.disable()
             elif self.total_tiles[n] > 200:
                 bg = 'yellow'
             else:
@@ -150,18 +156,15 @@ class TileViewer:
             self.total_badges[n].set_text_color(get_text_color(bg))
             self.total_badges[n].set_background_color(bg)
             self.total_badges[n].set_text(str(self.total_tiles[n]))
-
-        enable(self.threshold_number)
+        self.threshold_status.enable()
 
 
     def load_image(self, data: bytes) -> None:
         try:
             image = Image.open(BytesIO(data)).convert("RGB")
+            self.set_image(image, frame=3)
         except Exception as e:
             ui.notify(e)
-            return
-
-        self.set_image(image, frame=3)
 
 
     def set_image(self, image: Image.Image, frame: int = 3) -> None:
@@ -187,7 +190,6 @@ class TileViewer:
         self.grid_height_number.set_value(8);
         enable(self.grid_height_number)
         self.threshold_number.set_value(0.0);
-        enable(self.threshold_number)
         enable(self.frame_toggle)
 
 
@@ -219,9 +221,9 @@ class TileViewer:
 
     def remove_image(self) -> None:
         if self.msx:
+            self.msx = None
             disable(self.grid_width_number)
             disable(self.grid_height_number)
-            disable(self.threshold_number)
             ui.run_javascript('window.tileViewer.reset();');
 
 
@@ -237,17 +239,14 @@ class TileViewer:
 
 
     async def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
-        disable(self.threshold_number)
-        if self.processing_tiles or not self.msx:
-            return
-        self.processing_tiles = True
         try:
-            self.threshold = float(event.value)
+            self.threshold_status.disable()
             self.reuse_tiles, self.total_tiles = await run.io_bound(process_tiles, float(event.value), self.msx)
-        finally:
-            self.processing_tiles = False
+            self.threshold = float(event.value)
+            self.threshold_status.enable()
             self.update_tile_info()
-            enable(self.threshold_number)
+        except Exception as e:
+            ui.notify(e)
 
 
     def on_save_image_clicked(self):
@@ -273,12 +272,11 @@ class TileViewer:
 
 
     async def on_tile_clicked(self, e: events.GenericEventArguments) -> None:
-        if self.waiting_tile_editor:
-            return
-        self.waiting_tile_editor = True
         if not self.msx:
             return
-
+        if self.waiting_tile_editor:
+            return
+        self.waiting_tile_editor.enable()
         self.selected_x = int(e.args['x'] // self.grid_width) * self.grid_width
         self.selected_y = int(e.args['y'] // self.grid_height) * self.grid_height
         self.redraw()
@@ -305,9 +303,8 @@ class TileViewer:
                     b = True if row[x] == fg else False
                     self.msx[y + self.selected_y][(x + self.selected_x) // TILE_SIZE].from_rgb(x, b, fg, bg, frame)
                     z.append(b)
-                print(f'{y}: {z=}')
             self.render_images(self.current_frame)
-        self.waiting_tile_editor = False
+        self.waiting_tile_editor.disable()
 
 
 def process_tiles(threshold: float, msx: MSXBitmap_105) -> tuple[list[int], list[int]]:
