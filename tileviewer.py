@@ -17,7 +17,7 @@ from datatypes import Tile, from_105_to_metatile, TILE_SIZE
 from tileeditor import TileEditor
 from imageslider import ImageSliderWidget
 
-from bmpto105 import BmpTo105, MSXBitmap_105
+from bmpto105 import Engine, MSXBitmap_105
 
 
 PALETTE = [
@@ -72,7 +72,7 @@ class TileViewer:
         d = BoolStatus(function=lambda: (not self.msx is None) and all([n < 256 for n in self.total_tiles]))
         self.allow_save = d
 
-        self.engine = BmpTo105(PALETTE)
+        self.engine = Engine(PALETTE)
         self.reuse_tiles = [0, 0, 0]
         self.total_tiles = [0, 0, 0]
         self.threshold = 0.0
@@ -179,7 +179,7 @@ class TileViewer:
             return
 
         # update tile info
-        self.reuse_tiles, self.total_tiles = process_tiles(self.threshold, self.msx)
+        self.process_tiles(self.threshold)
         self.update_tile_info()
 
         # reset visible images
@@ -245,7 +245,7 @@ class TileViewer:
     async def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
         try:
             self.threshold_status.disable()
-            self.reuse_tiles, self.total_tiles = await run.io_bound(process_tiles, float(event.value), self.msx)
+            await run.io_bound(self.process_tiles, float(event.value))
             self.threshold = float(event.value)
             self.threshold_status.enable()
             self.update_tile_info()
@@ -312,12 +312,10 @@ class TileViewer:
         self.waiting_tile_editor.disable()
 
 
-def process_tiles(threshold: float, msx: MSXBitmap_105) -> tuple[list[int], list[int]]:
-    """Run outside class so we don't have to pickle it."""
-    reuse_tiles, total_tiles = [0, 0, 0], [0, 0, 0]
-    reuse_tiles[0], total_tiles[0] = msx.stats(0, 64, threshold)
-    reuse_tiles[1], total_tiles[1] = msx.stats(64, 128, threshold)
-    reuse_tiles[2], total_tiles[2] = msx.stats(128, 196, threshold)
-
-    return reuse_tiles, total_tiles
+    def process_tiles(self, threshold: float) -> None:
+        """Run outside class so we don't have to pickle it."""
+        self.reuse_tiles, self.total_tiles = [0, 0, 0], [0, 0, 0]
+        self.reuse_tiles[0], self.total_tiles[0] = self.engine.stats(self.msx, 0, 64, threshold)
+        self.reuse_tiles[1], self.total_tiles[1] = self.engine.stats(self.msx, 64, 128, threshold)
+        self.reuse_tiles[2], self.total_tiles[2] = self.engine.stats(self.msx, 128, 196, threshold)
 
