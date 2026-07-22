@@ -1,4 +1,4 @@
-from typing import cast
+from typing import cast, Callable
 from nicegui import ui, app, events, run
 from PIL import Image
 from io import BytesIO
@@ -13,7 +13,7 @@ from common import add_handlers, file_to_base64, disable, enable, get_text_color
 from ui import BoolStatus
 from constants import GRID_PIXEL_MAX
 from fileloader import FileLoader
-from datatypes import Tile, from_105_to_metatile, TILE_SIZE
+from datatypes import Tile, from_105_to_metatile, TILE_SIZE, TileRow
 from tileeditor import TileEditor
 from imageslider import ImageSliderWidget
 
@@ -39,8 +39,8 @@ class TileViewer:
     selected_x: int
     selected_y: int
     msx: MSXBitmap_105 | None
-    image: list[Image.Image]
-    image64: list[str]
+    images: list[Image.Image]
+    images64: list[str]
     current_frame: int
     allow_save: BoolStatus
 
@@ -63,13 +63,18 @@ class TileViewer:
         self.msx = None
         if image: self.set_image(image)
 
-        b = BoolStatus(inherent_state=False, function=lambda: (not self.msx is None))
+        b = BoolStatus(
+                inherent_state=False,
+                function=lambda: (not self.msx is None))
         self.threshold_status = b
 
-        c = BoolStatus(inherent_state=False, function=lambda: (not self.msx is None))
+        c = BoolStatus(
+                inherent_state=False,
+                function=lambda: (not self.msx is None))
         self.waiting_tile_editor = c
 
-        d = BoolStatus(function=lambda: (not self.msx is None) and all([n < 256 for n in self.total_tiles]))
+        d = BoolStatus(
+                function=lambda: (not self.msx is None) and all([n < 256 for n in self.total_tiles]))
         self.allow_save = d
 
         self.engine = Engine(PALETTE)
@@ -90,8 +95,11 @@ class TileViewer:
             ImageSliderWidget('./samples', 256, 192, on_loaded=self.load_image, on_removed=self.remove_image)
 
             with ui.row().classes('items-start flex-nowrap w-full'):
-                self.frame_toggle = disable(ui.toggle({1: 'even frame', 2: 'odd frame', 3: 'combined'}, value=3,
-                                                      on_change=lambda e: self.draw_frame(int(e.value))))
+                self.frame_toggle = cast(
+                        ui.toggle,
+                        disable(ui.toggle({1: 'even frame', 2: 'odd frame', 3: 'combined'}, value=3,
+                                          on_change=lambda e: self.draw_frame(int(e.value))))
+                )
 
                 (
                     ui.slider(min=1, max=16, value=self.zoom, step=1,
@@ -106,12 +114,12 @@ class TileViewer:
                 self.grid_width_number = cast(ui.number, disable(
                     ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
                               on_change=lambda e: self.on_change_grid_size('w', e),
-                              validation={'metatile size mismatch': lambda value: self.image[1].size[0] % value == 0})
+                              validation={'metatile size mismatch': lambda value: self.images[0].size[0] % value == 0})
                 ))
                 self.grid_height_number = cast(ui.number, disable(
                     ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
                               on_change=lambda e: self.on_change_grid_size('h', e),
-                             validation={'metatile size mismatch': lambda value: self.image[1].size[1] % value == 0})
+                             validation={'metatile size mismatch': lambda value: self.images[0].size[1] % value == 0})
                 ))
 
             with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
@@ -136,10 +144,10 @@ class TileViewer:
                     ui.label('/')
                     self.total_badges.append(ui.badge('0', color='purple').tooltip('bottom 64x8 tiles'))
 
-                self.threshold_number = cast(ui.number, 
+                self.threshold_number = (
                         ui.number(label='DCT Threshold', min=0.0, value=0.0, step=0.1, max=1.0, format='%0.1f',
                                   on_change=self.on_change_threshold).classes('w-[170px]').props('debounce=500')
-                            .bind_enabled_from(self.threshold_status, 'is_enabled')
+                        .bind_enabled_from(self.threshold_status, 'is_enabled')
                 )
 
 
@@ -183,8 +191,8 @@ class TileViewer:
         self.update_tile_info()
 
         # reset visible images
-        self.image = [None] * 4
-        self.image64 = [None] * 4
+        self.images: list[Image.Image] = []
+        self.images64: list[str] = []
 
         self.render_images(frame)
 
@@ -197,14 +205,18 @@ class TileViewer:
         enable(self.frame_toggle)
 
 
-    def render_images(self, frame):
+    def render_images(self, frame: int) -> None:
         # create all frames (1 = even, 2 = odd, 3 = combined) at once
-        for n in range(1, 4):
-            buffer = BytesIO()
-            self.image[n] = self.msx.to_image(n)
-            self.image[n].save(buffer, format='PNG')
-            self.image64[n] = file_to_base64(buffer)
-        self.draw_frame(frame)
+        if self.msx:
+            for n in range(1, 4):
+                buffer = BytesIO()
+                image = self.msx.to_image(n)
+                image.save(buffer, format='PNG')
+                self.images.append(image)
+                image64 = file_to_base64(buffer)
+                self.images64.append(image64)
+            print(len(self.images64))
+            self.draw_frame(frame)
 
 
     def draw_frame(self, frame: int = 3) -> None:
@@ -212,7 +224,7 @@ class TileViewer:
         ui.run_javascript(f"""
             window.tileViewer.initialize({{
                 canvasId: "tile_canvas",
-                image: "{self.image64[frame]}",
+                image: "{self.images64[frame - 1]}",
                 selectedX: {self.selected_x},
                 selectedY: {self.selected_y},
                 gridWidth: {self.grid_width},
@@ -235,18 +247,18 @@ class TileViewer:
         self.remove_image()
 
 
-    def on_change_grid_size(self, type: str, event: events.ValueChangeEventArguments[int | None]) -> None:
-        if self.msx:
-            if type == 'w': self.grid_width = int(event.value)
-            if type == 'h': self.grid_height = int(event.value)
+    def on_change_grid_size(self, type_: str, event: events.ValueChangeEventArguments[int | None]) -> None:
+        if self.msx and type(event.value) == int:
+            if type_ == 'w': self.grid_width = event.value
+            if type_ == 'h': self.grid_height = event.value
             self.redraw()
 
 
     async def on_change_threshold(self, event: events.ValueChangeEventArguments[float | None]) -> None:
         try:
             self.threshold_status.disable()
-            await run.io_bound(self.process_tiles, float(event.value))
-            self.threshold = float(event.value)
+            await run.io_bound(self.process_tiles, cast(float, event.value))
+            self.threshold = cast(float, event.value)
             self.threshold_status.enable()
             self.update_tile_info()
         except Exception as e:
@@ -254,8 +266,11 @@ class TileViewer:
             ui.notify(e)
 
 
-    def on_save_image_clicked(self):
-        ui.download.content(self.msx.save(BytesIO()).getvalue(), 'image.si2')
+    def on_save_image_clicked(self) -> None:
+        if self.msx:
+            bytes_ = BytesIO()
+            self.msx.save(bytes_)
+            ui.download.content(bytes_.getvalue(), 'image.si2')
 
 
     def redraw(self) -> None:
@@ -292,7 +307,7 @@ class TileViewer:
         # Fix here
         metatile = from_105_to_metatile(data, self.grid_width, self.grid_height)
 
-        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.image[1].size[0] * GRID_PIXEL_MAX)
+        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.images[0].size[0] * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
             editor = TileEditor(parent, metatile)
             with ui.row().classes('w-full justify-end'):
