@@ -39,7 +39,6 @@ class TileViewer:
     selected_x: int
     selected_y: int
     msx: MSXBitmap_105 | None
-    images: list[Image.Image]
     images64: list[str]
     current_frame: int
     allow_save: BoolStatus
@@ -114,12 +113,12 @@ class TileViewer:
                 self.grid_width_number = cast(ui.number, disable(
                     ui.number(label='Metatile Width', min=8, value=8, step=8, format='%i',
                               on_change=lambda e: self.on_change_grid_size('w', e),
-                              validation={'metatile size mismatch': lambda value: self.images[0].size[0] % value == 0})
+                              validation={'metatile size mismatch': lambda value: self.msx.width * TILE_SIZE % value == 0})
                 ))
                 self.grid_height_number = cast(ui.number, disable(
                     ui.number(label='Metatile Height', min=8, value=8, step=8, format='%i',
                               on_change=lambda e: self.on_change_grid_size('h', e),
-                             validation={'metatile size mismatch': lambda value: self.images[0].size[1] % value == 0})
+                             validation={'metatile size mismatch': lambda value: self.msx.width * TILE_SIZE % value == 0})
                 ))
 
             with ui.scroll_area().classes('w-full flex-1 border bg-gray-200').on('contextmenu.prevent', lambda: None):
@@ -191,9 +190,6 @@ class TileViewer:
         self.update_tile_info()
 
         # reset visible images
-        self.images: list[Image.Image] = []
-        self.images64: list[str] = []
-
         self.render_images(frame)
 
         # enable all widgets
@@ -208,14 +204,13 @@ class TileViewer:
     def render_images(self, frame: int) -> None:
         # create all frames (1 = even, 2 = odd, 3 = combined) at once
         if self.msx:
+            self.images64 = ['']
             for n in range(1, 4):
                 buffer = BytesIO()
                 image = self.msx.to_image(n)
                 image.save(buffer, format='PNG')
-                self.images.append(image)
                 image64 = file_to_base64(buffer)
                 self.images64.append(image64)
-            print(len(self.images64))
             self.draw_frame(frame)
 
 
@@ -224,7 +219,7 @@ class TileViewer:
         ui.run_javascript(f"""
             window.tileViewer.initialize({{
                 canvasId: "tile_canvas",
-                image: "{self.images64[frame - 1]}",
+                image: "{self.images64[frame]}",
                 selectedX: {self.selected_x},
                 selectedY: {self.selected_y},
                 gridWidth: {self.grid_width},
@@ -247,10 +242,10 @@ class TileViewer:
         self.remove_image()
 
 
-    def on_change_grid_size(self, type_: str, event: events.ValueChangeEventArguments[int | None]) -> None:
-        if self.msx and type(event.value) == int:
-            if type_ == 'w': self.grid_width = event.value
-            if type_ == 'h': self.grid_height = event.value
+    def on_change_grid_size(self, type_: str, event: events.ValueChangeEventArguments[float | None]) -> None:
+        if self.msx and type(event.value) == float:
+            if type_ == 'w': self.grid_width = int(event.value)
+            if type_ == 'h': self.grid_height = int(event.value)
             self.redraw()
 
 
@@ -307,22 +302,22 @@ class TileViewer:
         # Fix here
         metatile = from_105_to_metatile(data, self.grid_width, self.grid_height)
 
-        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.images[0].size[0] * GRID_PIXEL_MAX)
+        width = min(common.SCREEN_WIDTH * 0.90, 260 + self.msx.width * GRID_PIXEL_MAX)
         with ui.dialog() as dialog, ui.card().style(f'max-width: None; width: {width}px;') as parent:
             editor = TileEditor(parent, metatile)
             with ui.row().classes('w-full justify-end'):
                 ui.button('OK', on_click=lambda: dialog.submit(True))
                 ui.button('Cancel', on_click=lambda: dialog.submit(False))
         if await dialog:
+            y: int
+            row: TileRow
             for y, row in enumerate(editor.grid):
-                z = []
-                fg, bg = None, None
+                fg, bg = 0, 0
                 for x in range(len(row)):
                     if x % TILE_SIZE == 0:
                         fg, bg = row.get_fg(x), row.get_bg(x)
-                    b = True if row[x] == fg else False
-                    self.msx[y + self.selected_y][(x + self.selected_x) // TILE_SIZE].from_rgb(x, b, fg, bg, frame)
-                    z.append(b)
+                    bit = True if row[x] == fg else False
+                    self.msx[y + self.selected_y][(x + self.selected_x) // TILE_SIZE].from_rgb(x % TILE_SIZE, bit, fg, bg, frame)
             self.render_images(self.current_frame)
         self.waiting_tile_editor.disable()
 
