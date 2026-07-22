@@ -1,8 +1,10 @@
 from typing import cast
 from nicegui import ui, app, events, run
 from PIL import Image
-import base64
 from io import BytesIO
+
+import base64
+import traceback
 
 import common
 
@@ -164,6 +166,7 @@ class TileViewer:
             image = Image.open(BytesIO(data)).convert("RGB")
             self.set_image(image, frame=3)
         except Exception as e:
+            traceback.print_exc()
             ui.notify(e)
 
 
@@ -171,6 +174,7 @@ class TileViewer:
         try:
             self.msx = self.engine.convert(image)
         except Exception as e:
+            traceback.print_exc()
             ui.notify(e)
             return
 
@@ -246,6 +250,7 @@ class TileViewer:
             self.threshold_status.enable()
             self.update_tile_info()
         except Exception as e:
+            traceback.print_exc()
             ui.notify(e)
 
 
